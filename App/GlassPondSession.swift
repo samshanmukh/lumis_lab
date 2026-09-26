@@ -6,6 +6,7 @@ import SwiftUI
 @MainActor
 final class GlassPondSession {
   var stage: GlassPondStage = .entrance
+  var doorOpenProgress = 0.0
   var tilt = 25.0
   var inputMode: PondInputMode = .dial
   var hingeAvailable = false
@@ -30,6 +31,7 @@ final class GlassPondSession {
 
   @ObservationIgnored private var sweepTask: Task<Void, Never>?
   @ObservationIgnored private var challengeHoldTask: Task<Void, Never>?
+  @ObservationIgnored private var doorEntryTask: Task<Void, Never>?
 
   var snapshot: PondLightSnapshot {
     GlassOptics.snapshot(at: sceneAngle)
@@ -69,7 +71,26 @@ final class GlassPondSession {
   }
 
   func enterRoom() {
+    doorEntryTask?.cancel()
+    doorEntryTask = nil
     stage = .prediction
+  }
+
+  func openDoor() {
+    guard stage == .entrance, doorEntryTask == nil else { return }
+    doorOpenProgress = 1
+    scheduleDoorEntry(after: 700_000_000)
+  }
+
+  private func scheduleDoorEntry(after nanoseconds: UInt64) {
+    doorEntryTask = Task { @MainActor in
+      try? await Task.sleep(nanoseconds: nanoseconds)
+      guard !Task.isCancelled, stage == .entrance, doorOpenProgress >= 0.98 else {
+        doorEntryTask = nil
+        return
+      }
+      enterRoom()
+    }
   }
 
   func choosePrediction(_ answer: PondAnswer) {
@@ -102,14 +123,44 @@ final class GlassPondSession {
 
   @available(iOS 27.1, *)
   func receiveHinge(_ context: DeviceHingeContext) {
-    guard let hinge = context.hinge, hinge.status == .partiallyOpen else {
+    guard let hinge = context.hinge else {
       hingeAvailable = false
       inputMode = .dial
+      if stage == .entrance {
+        doorEntryTask?.cancel()
+        doorEntryTask = nil
+        doorOpenProgress = 0
+      }
+      return
+    }
+    guard hinge.status == .partiallyOpen else {
+      hingeAvailable = false
+      inputMode = .dial
+      if stage == .entrance {
+        if doorOpenProgress > 0.5 && hinge.angle.degrees >= 100 {
+          doorOpenProgress = 1
+          if doorEntryTask == nil { scheduleDoorEntry(after: 350_000_000) }
+        } else {
+          doorEntryTask?.cancel()
+          doorEntryTask = nil
+          doorOpenProgress = 0
+        }
+      }
       return
     }
     hingeAvailable = true
     guard !prefersDial else { return }
     inputMode = .hinge
+    if stage == .entrance {
+      doorOpenProgress = min(max(hinge.angle.degrees / 110, 0), 1)
+      if doorOpenProgress >= 0.98 {
+        if doorEntryTask == nil { scheduleDoorEntry(after: 350_000_000) }
+      } else {
+        doorEntryTask?.cancel()
+        doorEntryTask = nil
+      }
+      return
+    }
     updateTilt(GlassOptics.tilt(forHingeAngle: hinge.angle.degrees))
   }
 
@@ -187,11 +238,14 @@ final class GlassPondSession {
   }
 
   func reset() {
+    doorEntryTask?.cancel()
     sweepTask?.cancel()
     challengeHoldTask?.cancel()
     sweepTask = nil
     challengeHoldTask = nil
+    doorEntryTask = nil
     stage = .entrance
+    doorOpenProgress = 0
     tilt = 25
     prediction = nil
     checkAnswer = nil
@@ -246,7 +300,7 @@ final class GlassPondSession {
   }
 }
 
-enum GlassPondStage: Equatable {
+enum GlassPondStage: Hashable {
   case entrance
   case prediction
   case experiment

@@ -8,6 +8,10 @@ struct PondControlPanel: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 18) {
         stageContent
+          .id(session.stage)
+          .transition(reduceMotion
+            ? .opacity
+            : .asymmetric(insertion: .opacity.combined(with: .offset(y: 12)), removal: .opacity))
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(24)
@@ -15,7 +19,8 @@ struct PondControlPanel: View {
     .scrollIndicators(.hidden)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(PondPalette.panelGradient)
-    .animation(reduceMotion ? nil : .smooth, value: session.stage)
+    .id(session.stage)
+    .animation(reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.42, dampingFraction: 0.9), value: session.stage)
   }
 
   @ViewBuilder
@@ -113,7 +118,9 @@ struct PondControlPanel: View {
         .foregroundStyle(.white.opacity(0.8))
       PondAnswerChoices(
         selection: session.answerRevealed ? .stuck : session.checkAnswer,
-        correctAnswer: session.answerRevealed ? .stuck : nil
+        correctAnswer: session.answerRevealed ? .stuck : nil,
+        lastWrongAnswer: session.checkAnswer == .stuck ? nil : session.checkAnswer,
+        wrongCheckCount: session.wrongCheckCount
       ) { answer in
         session.chooseCheckAnswer(answer)
       }
@@ -334,15 +341,12 @@ struct PondControlPanel: View {
 private struct PondAnswerChoices: View {
   var selection: PondAnswer?
   var correctAnswer: PondAnswer? = nil
+  var lastWrongAnswer: PondAnswer? = nil
+  var wrongCheckCount = 0
   var choose: (PondAnswer) -> Void
 
   var body: some View {
-    ViewThatFits {
-      HStack(spacing: 8) { chips }
-      VStack(spacing: 8) { chips }
-    }
-    .accessibilityElement(children: .contain)
-    .accessibilityLabel("Answer choices")
+    VStack(spacing: 8) { chips }
   }
 
   @ViewBuilder
@@ -351,7 +355,8 @@ private struct PondAnswerChoices: View {
       PondChoiceChip(
         title: answer.title,
         isSelected: selection == answer,
-        isCorrect: correctAnswer == answer
+        isCorrect: correctAnswer == answer,
+        shakeCount: lastWrongAnswer == answer ? wrongCheckCount : 0
       ) {
         choose(answer)
       }
@@ -363,7 +368,12 @@ private struct PondChoiceChip: View {
   var title: String
   var isSelected: Bool
   var isCorrect: Bool
+  var shakeCount = 0
   var action: () -> Void
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var shakeOffset: CGFloat = 0
+  @State private var shakeTask: Task<Void, Never>?
 
   var body: some View {
     Button {
@@ -375,13 +385,38 @@ private struct PondChoiceChip: View {
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, minHeight: 44)
         .padding(.horizontal, 10)
-        .background(isCorrect ? PondPalette.pond.opacity(0.28) : .white.opacity(isSelected ? 0.22 : 0.12), in: Capsule())
+        .background(isCorrect ? PondPalette.correct.opacity(0.28) : .white.opacity(isSelected ? 0.22 : 0.12), in: Capsule())
         .overlay {
           Capsule()
-            .strokeBorder(isCorrect ? PondPalette.pond : .white.opacity(isSelected ? 0.7 : 0.15), lineWidth: 1.5)
+            .strokeBorder(isCorrect ? PondPalette.correct : isSelected ? PondPalette.retry : .white.opacity(0.15), lineWidth: 1.5)
         }
+        .animation(.easeOut(duration: 0.12), value: isSelected)
+        .animation(.easeOut(duration: 0.12), value: isCorrect)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(PondChipPressStyle())
+    .offset(x: shakeOffset)
+    .onChange(of: shakeCount) { _, newCount in
+      guard newCount > 0, !reduceMotion else { return }
+      shakeTask?.cancel()
+      shakeTask = Task { @MainActor in
+        for offset in [6.0, -6.0, 4.0, -4.0, 2.0, 0.0] {
+          guard !Task.isCancelled else { return }
+          withAnimation(.linear(duration: 0.06)) { shakeOffset = offset }
+          try? await Task.sleep(nanoseconds: 60_000_000)
+        }
+      }
+    }
+    .onDisappear { shakeTask?.cancel() }
+    .accessibilityLabel(title)
+    .accessibilityValue(isCorrect ? "Correct" : isSelected ? "Selected" : "")
     .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+}
+
+private struct PondChipPressStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.96 : 1)
+      .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
   }
 }
