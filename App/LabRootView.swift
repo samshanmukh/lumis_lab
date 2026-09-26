@@ -15,7 +15,6 @@ struct LabRootView: View {
   @State private var hinge = HingeModel()
   @State private var mirrorRoom: MirrorRoomModel?
   @State private var pondRoom: GlassPondModel?
-  @State private var marbleRoom: MarbleRampModel?
   @State private var route: LabRoute?
   @State private var justFinished: RoomID?
   @State private var doorOpensAtOnce = false
@@ -59,14 +58,11 @@ struct LabRootView: View {
           }
         case .room(.glassPond):
           if let pondRoom {
-            GlassPondView(room: pondRoom, map: showMap, leave: exitRoom) { tapped in
-              goToDoor(.marbleRamp, opensAtOnce: tapped)
-            }
+            GlassPondView(room: pondRoom, map: showMap, leave: exitRoom) { _ in openMarble() }
           }
         case .room(.marbleRamp):
-          if let marbleRoom {
-            MarbleRampView(room: marbleRoom, map: showMap, leave: exitRoom)
-          }
+          MarbleChapterView(onExitToMap: showMap, onCompleted: completeMarble)
+            .toolbar(.hidden, for: .navigationBar)
         case .room, nil:
           Color.clear
             .toolbar(.hidden, for: .navigationBar)
@@ -107,14 +103,17 @@ struct LabRootView: View {
     switch room {
     case .mirror: mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
     case .glassPond: pondRoom = GlassPondModel(app: model, hinge: hinge)
-    case .marbleRamp: marbleRoom = MarbleRampModel(app: model, hinge: hinge)
-    case .launchAngle: break
+    case .marbleRamp, .launchAngle: break
     }
   }
 
   /// Start resumes the saved step; a finished room replays from its door, keeping its fireflies.
   private func openRoom(_ room: RoomID) {
     guard room.isPlayable else { return }
+    if room == .marbleRamp {
+      openMarble()
+      return
+    }
     justFinished = nil
     doorOpensAtOnce = false
     if model.room(room).solved {
@@ -136,7 +135,23 @@ struct LabRootView: View {
     withAnimation(LabMotion.room) { route = .door(room) }
     mirrorRoom = nil
     pondRoom = nil
-    marbleRoom = nil
+  }
+
+  /// The Marble Ramp is its own chapter with its own door; it always starts there.
+  private func openMarble() {
+    justFinished = nil
+    model.setStep(.door, room: .marbleRamp)
+    withAnimation(LabMotion.room) { route = .room(.marbleRamp) }
+    mirrorRoom = nil
+    pondRoom = nil
+  }
+
+  private func completeMarble() {
+    model.updateRoom(.marbleRamp) { state in
+      state.step = .solved
+      state.solved = true
+      state.fireflies.insert(.challenge)
+    }
   }
 
   private func showMap() {
@@ -150,7 +165,6 @@ struct LabRootView: View {
     withAnimation(LabMotion.room) { route = .journey }
     mirrorRoom = nil
     pondRoom = nil
-    marbleRoom = nil
   }
 }
 

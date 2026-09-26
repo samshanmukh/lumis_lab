@@ -49,6 +49,10 @@ enum RoomID: String, Codable, CaseIterable, Identifiable {
   /// Rooms built so far. The others show on the journey but can’t be started yet.
   var isPlayable: Bool { self != .launchAngle }
 
+  /// Most rooms open once the one before is done. The Marble Ramp arrived as its own
+  /// chapter and can be played any time.
+  var opensInOrder: Bool { self != .marbleRamp }
+
   /// Book rooms open straight from the closed phone; laptop rooms turn sideways first.
   var playsLikeLaptop: Bool { self != .mirror }
 
@@ -69,7 +73,7 @@ enum RoomID: String, Codable, CaseIterable, Identifiable {
     switch self {
     case .mirror: "How many Lumis can two mirrors make?"
     case .glassPond: "Can light get stuck in glass?"
-    case .marbleRamp: "Can Lumi’s marble roll far enough?"
+    case .marbleRamp: "Wake the firefly with the Duo hinge"
     case .launchAngle: ""
     }
   }
