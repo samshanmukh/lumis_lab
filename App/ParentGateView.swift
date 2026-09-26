@@ -208,13 +208,18 @@ struct GateChallenge: Equatable {
     "Type the numbers " + digits.map { Self.names[$0] }.joined(separator: ", ") + "."
   }
 
-  /// New digits every time, never the same code twice in a row.
+  /// New digits every time, never the same code twice in a row. Debug builds always ask for
+  /// 000, so testing the Plus flow is quick; release builds keep the changing digits.
   static func make(after previous: GateChallenge? = nil) -> GateChallenge {
+    #if DEBUG
+    return GateChallenge(digits: [0, 0, 0])
+    #else
     var next: GateChallenge
     repeat {
       next = GateChallenge(digits: (0..<length).map { _ in Int.random(in: 0...9) })
     } while next == previous
     return next
+    #endif
   }
 
   private static let names = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]

@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// A room’s front door, laid out from its container. Book rooms open straight from the closed
-/// phone and the leaves swing with the hinge. Laptop rooms (the Glass Pond) lean toward sideways
-/// while the phone is closed and upright, turn on their side with the phone, then open like a lid.
+/// phone and the leaves swing with the hinge. Laptop rooms (the Glass Pond, the Marble Ramp) lean
+/// toward sideways while the phone is closed and upright, turn on their side with the phone, then
+/// open like a lid.
 struct DoorView: View {
   var room: RoomID = .mirror
   var hinge: HingeModel
@@ -163,7 +164,7 @@ struct DoorView: View {
         Text("Room \(room.number)")
           .font(LabFont.caption)
           .foregroundStyle(LabColor.retry)
-        Text(room.title)
+        Text(room.signName)
           .font(.system(.title2, design: .rounded, weight: .bold))
           .foregroundStyle(LabColor.primaryInk)
           .fixedSize(horizontal: false, vertical: true)
@@ -176,7 +177,7 @@ struct DoorView: View {
         Text("Room \(room.number)")
           .font(LabFont.caption)
           .foregroundStyle(LabColor.retry)
-        Text(room.title)
+        Text(room.signName)
           .font(LabFont.display)
           .foregroundStyle(LabColor.primaryInk)
           .lineLimit(1)

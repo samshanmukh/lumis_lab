@@ -27,6 +27,16 @@ struct DialScale {
     value: GlassOptics.tilt(forHinge:),
     hingeAngle: GlassOptics.hinge(forTilt:)
   )
+
+  /// The Marble Ramp: the upright screen’s tilt (180° − hinge), 15–50°. Dragging right makes the
+  /// ramp steeper.
+  static let rampTilt = DialScale(
+    name: "Ramp angle",
+    range: HingeModel.rampRange,
+    detents: [15, 20, 30, 40, 45, 50],
+    value: { min(HingeModel.rampRange.upperBound, max(HingeModel.rampRange.lowerBound, 180 - $0)) },
+    hingeAngle: { 180 - $0 }
+  )
 }
 
 struct AngleDial: View {

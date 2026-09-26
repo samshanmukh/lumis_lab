@@ -41,6 +41,22 @@ struct MathSheet {
       Row(key: 48, left: "48°", right: "stays inside", spoken: "48 degrees in glass, the light stays inside")
     ]
   )
+
+  /// The Marble Ramp: speed at the bottom = √(10/7 × g × height), for a 10 cm drop.
+  static let marbleRamp = MathSheet(
+    formula: "speed at the bottom = √(10/7 × g × height)",
+    formulaInk: LabColor.lumi,
+    explanation: "Height turns into speed. The angle isn’t in the formula, so from the same height every smooth ramp gives the same speed. Steeper just gets there sooner.",
+    columns: ("Ramp (10 cm drop)", "Time down · speed at the bottom"),
+    rows: [(15, "0.65"), (20, "0.49"), (30, "0.34"), (40, "0.26"), (45, "0.24"), (50, "0.22")].map { angle, time in
+      Row(
+        key: Double(angle),
+        left: "\(angle)°",
+        right: "\(time) s · 1.2 m/s",
+        spoken: "\(angle) degrees, \(time) seconds down, 1.2 meters per second at the bottom"
+      )
+    }
+  )
 }
 
 /// Show the math: the rule and a table to test it with. The current row follows the live value.

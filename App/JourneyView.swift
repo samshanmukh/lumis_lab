@@ -28,35 +28,44 @@ struct JourneyView: View {
   }
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        ViewThatFits(in: .horizontal) {
-          header(compactGrownUps: false)
-          header(compactGrownUps: true)
-        }
-        .padding(.bottom, 12)
+    ScrollViewReader { proxy in
+      ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+          ViewThatFits(in: .horizontal) {
+            header(compactGrownUps: false)
+            header(compactGrownUps: true)
+          }
+          .padding(.bottom, 12)
 
-        Text("\(model.earnedFireflies) of 12 fireflies")
-          .font(LabFont.caption)
-          .foregroundStyle(LabColor.tertiaryInk)
-          .contentTransition(.numericText())
-          .padding(.bottom, 28)
+          Text("\(model.earnedFireflies) of 12 fireflies")
+            .font(LabFont.caption)
+            .foregroundStyle(LabColor.tertiaryInk)
+            .contentTransition(.numericText())
+            .padding(.bottom, 28)
 
-        ForEach(stops, id: \.room) { stop in
-          stopView(stop.room, subtitle: stop.subtitle)
-          if let below = stop.room.previous {
-            dottedTrail(active: model.room(below).solved)
-              .padding(.leading, 53)
+          ForEach(stops, id: \.room) { stop in
+            stopView(stop.room, subtitle: stop.subtitle)
+              .id(stop.room)
+            if let below = stop.room.previous {
+              dottedTrail(active: model.room(below).solved)
+                .padding(.leading, 53)
+            }
           }
         }
+        .frame(maxWidth: 660, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 40)
+        .padding(.top, 40)
+        .padding(.bottom, 40)
       }
-      .frame(maxWidth: 660, alignment: .leading)
-      .frame(maxWidth: .infinity)
-      .padding(.horizontal, 40)
-      .padding(.top, 40)
-      .padding(.bottom, 40)
+      .defaultScrollAnchor(.bottom)
+      .onAppear {
+        // Start where the journey is: the room to play next.
+        if let focus = RoomID.allCases.first(where: { state(for: $0) == .current }), focus != .mirror {
+          proxy.scrollTo(focus, anchor: .center)
+        }
+      }
     }
-    .defaultScrollAnchor(.bottom)
     .background(LabBackdrop())
     .task { await lightFireflies() }
   }

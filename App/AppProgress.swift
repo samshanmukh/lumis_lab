@@ -17,6 +17,14 @@ enum RoomID: String, Codable, CaseIterable, Identifiable {
     }
   }
 
+  /// The name on the room’s door sign.
+  var signName: String {
+    switch self {
+    case .marbleRamp: "The Marble Ramp"
+    default: title
+    }
+  }
+
   var vignetteName: String {
     switch self {
     case .mirror: "MirrorVignette"
@@ -75,7 +83,8 @@ enum RoomID: String, Codable, CaseIterable, Identifiable {
     switch self {
     case .mirror: "Lumi is alone in the dark. Can mirrors make friends for her?"
     case .glassPond: "Lumi fell into a pond of magic glass. Can her light wake the moon lily?"
-    case .marbleRamp, .launchAngle: ""
+    case .marbleRamp: "A firefly fell asleep at the end of the path. Can Lumi’s marble roll far enough to wake it?"
+    case .launchAngle: "The moon bed is far away. Can Lumi throw her light into it?"
     }
   }
 }
