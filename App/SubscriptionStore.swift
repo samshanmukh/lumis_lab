@@ -39,6 +39,16 @@ final class SubscriptionStore {
     return productID == "monthly" || productID == "yearly"
   }
 
+  /// The active plan as grown-ups see it: Monthly, Yearly or Lifetime.
+  var proPlanName: String? {
+    switch activeProEntitlement?.productIdentifier {
+    case "monthly": "Monthly"
+    case "yearly": "Yearly"
+    case "lifetime": "Lifetime"
+    default: nil
+    }
+  }
+
   var missingProductIDs: Set<String> {
     guard let currentOffering else { return RevenueCatSetup.productIDs }
     let offeredIDs = Set(currentOffering.availablePackages.map(\.storeProduct.productIdentifier))

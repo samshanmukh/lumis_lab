@@ -26,7 +26,9 @@ The tone is curious rather than punitive. A wrong answer points the learner back
 | [The Mirror Room](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=35-399) | The angle between two simulated mirrors | At ideal symmetric angles, 90° shows four total Lumis and 60° shows six | Hackathon MVP |
 | [The Glass Pond](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=27-25) | A light ray’s angle at a glass-to-air boundary | Near 42°, the ray skims the surface; past it, light is trapped by total internal reflection | Designed next |
 | [The Marble Ramp](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=66-1543) | The slope of a virtual ramp | A steeper ramp arrives sooner from the same height; changing the controlled setup changes the energy comparison | Designed |
-| [Launch Angle](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=66-1546) | A virtual launch angle | In the ideal model, 45° travels farthest while complementary angles such as 30° and 60° land together | Designed |
+| [Launch Angle](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=66-1546) | A virtual launch angle | In the ideal model, 45° travels farthest while complementary angles such as 30° and 60° land together | Designed · Lumi’s Lab Plus |
+
+Launch Angle is part of **Lumi’s Lab Plus**. Tapping its stop on the journey asks for a grown-up; a parental gate then opens the RevenueCat paywall. The room isn’t built yet, so after a purchase its stop reads “Coming soon”. The [RevenueCat integration guide](docs/RevenueCat-Integration.md) covers setup and testing, and the [parental gate and Plus](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=127-2775) Figma section has the screens.
 
 ## Hackathon MVP
 

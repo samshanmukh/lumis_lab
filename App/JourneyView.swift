@@ -4,7 +4,10 @@ struct JourneyView: View {
   var model: AppModel
   var lightNewFireflies = false
   var start: () -> Void
+  var askGrownUp: (RoomID) -> Void
+  var openGrownUps: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(SubscriptionStore.self) private var subscriptions
   @State private var nudgedRoom: RoomID?
   @State private var litFireflies = 3
 
@@ -12,6 +15,8 @@ struct JourneyView: View {
     case current
     case done
     case locked
+    /// Part of Lumi’s Lab Plus, which this family doesn’t have yet.
+    case plus
   }
 
   private let stops: [(room: RoomID, subtitle: String)] = [
@@ -24,10 +29,11 @@ struct JourneyView: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
-        Text("Lumi’s journey")
-          .font(LabFont.display)
-          .foregroundStyle(LabColor.primaryInk)
-          .padding(.bottom, 12)
+        ViewThatFits(in: .horizontal) {
+          header(compactGrownUps: false)
+          header(compactGrownUps: true)
+        }
+        .padding(.bottom, 12)
 
         Text("\(model.earnedFireflies) of 12 fireflies")
           .font(LabFont.caption)
@@ -55,7 +61,8 @@ struct JourneyView: View {
   }
 
   private func state(for room: RoomID) -> StopState {
-    switch room {
+    if room.needsPlus && !subscriptions.isPro { return .plus }
+    return switch room {
     case .mirror: model.mirror.solved ? .done : .current
     case .glassPond: model.mirror.solved ? .current : .locked
     default: .locked
@@ -70,7 +77,10 @@ struct JourneyView: View {
     case .current:
       currentStop(room, subtitle: subtitle, startable: room == .mirror)
     case .locked:
-      lockedStop(room, subtitle: subtitle)
+      // With Plus, Launch Angle is open but not built yet.
+      lockedStop(room, subtitle: room.needsPlus ? "Coming soon" : subtitle)
+    case .plus:
+      plusStop(room)
     }
   }
 
@@ -175,6 +185,82 @@ struct JourneyView: View {
     .accessibilityHint("Coming later")
   }
 
+  /// 7.1 · A Plus room shows a lemon lock and who can open it, never a price.
+  private func plusStop(_ room: RoomID) -> some View {
+    Button {
+      askGrownUp(room)
+    } label: {
+      HStack(alignment: .center, spacing: 24) {
+        RoomVignetteView(room: room, size: 88)
+          .background(Circle().fill(LabColor.backgroundBottom))
+          .opacity(0.5)
+          .overlay(alignment: .topTrailing) {
+            PlusLockBadge()
+              .offset(x: 4)
+          }
+          .frame(width: 116)
+
+        VStack(alignment: .leading, spacing: 5) {
+          Text(room.title)
+            .font(LabFont.label)
+            .foregroundStyle(LabColor.primaryInk)
+          Text("Part of Lumi’s Lab Plus. Ask a grown-up to open it.")
+            .font(LabFont.caption)
+            .foregroundStyle(LabColor.secondaryInk)
+            .fixedSize(horizontal: false, vertical: true)
+          Text("Ask a grown-up")
+            .font(LabFont.label)
+            .fixedSize()
+            .foregroundStyle(LabColor.primaryInk)
+            .padding(.horizontal, 28)
+            .frame(height: 56)
+            .glassCapsule()
+            .padding(.top, 10)
+        }
+        Spacer(minLength: 0)
+      }
+      .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(room.title), part of Lumi’s Lab Plus, locked")
+    .accessibilityHint("Asks a grown-up to open it")
+  }
+
+  /// The title with Grown-ups beside it; the button drops its words where the title would wrap.
+  private func header(compactGrownUps: Bool) -> some View {
+    HStack(spacing: 16) {
+      Text("Lumi’s journey")
+        .font(LabFont.display)
+        .foregroundStyle(LabColor.primaryInk)
+      Spacer(minLength: 0)
+      grownUpsButton(compact: compactGrownUps)
+    }
+  }
+
+  /// Opens the parental gate, then everything a grown-up manages.
+  private func grownUpsButton(compact: Bool) -> some View {
+    Button(action: openGrownUps) {
+      Group {
+        if compact {
+          Image(systemName: "person.crop.circle")
+            .frame(width: 44, height: 44)
+        } else {
+          Label("Grown-ups", systemImage: "person.crop.circle")
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+        }
+      }
+      .font(.system(.subheadline, design: .rounded, weight: .semibold))
+      .foregroundStyle(LabColor.primaryInk)
+      .fixedSize()
+      .glassCapsule()
+      .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("Grown-ups")
+  }
+
   private var startPill: some View {
     Text("Start")
       .font(LabFont.label)
@@ -217,5 +303,18 @@ struct JourneyView: View {
     }
     .frame(height: 68)
     .accessibilityHidden(true)
+  }
+}
+
+/// A small lemon lock on a Plus room’s stop.
+private struct PlusLockBadge: View {
+  var body: some View {
+    Image(systemName: "lock.fill")
+      .font(.system(size: 12, weight: .bold))
+      .foregroundStyle(LabColor.label)
+      .frame(width: 30, height: 30)
+      .background(LabColor.labelSurface.opacity(0.9), in: Circle())
+      .overlay(Circle().strokeBorder(LabColor.label, lineWidth: 1.2))
+      .accessibilityHidden(true)
   }
 }

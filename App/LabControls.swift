@@ -64,11 +64,35 @@ struct GlassLabButton: View {
         .fixedSize()
         .padding(.horizontal, 28)
         .frame(minHeight: 56)
-        .background(.white.opacity(0.09), in: Capsule())
-        .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+        .glassCapsule()
         .contentShape(Capsule())
     }
     .buttonStyle(PrimaryLabButtonStyle())
+  }
+}
+
+extension View {
+  /// Glass behind a secondary control: white 9 % fill with a 16 % hairline.
+  func glassCapsule() -> some View {
+    background(.white.opacity(0.09), in: Capsule())
+      .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+  }
+
+  /// The wrong-answer shake: x ±6, ±4, ±2 pt over 0.36 s, once per trigger change.
+  func labShake(trigger: Int) -> some View {
+    keyframeAnimator(initialValue: CGFloat.zero, trigger: trigger) { content, offset in
+      content.offset(x: offset)
+    } keyframes: { _ in
+      KeyframeTrack {
+        LinearKeyframe(6, duration: 0.05)
+        LinearKeyframe(-6, duration: 0.05)
+        LinearKeyframe(4, duration: 0.05)
+        LinearKeyframe(-4, duration: 0.05)
+        LinearKeyframe(2, duration: 0.05)
+        LinearKeyframe(-2, duration: 0.05)
+        LinearKeyframe(0, duration: 0.06)
+      }
+    }
   }
 }
 
