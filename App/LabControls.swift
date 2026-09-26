@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PrimaryLabButton: View {
   var title: String
+  var fillsWidth = true
   var action: () -> Void
 
   var body: some View {
@@ -9,7 +10,9 @@ struct PrimaryLabButton: View {
       Text(title)
         .font(LabFont.label)
         .foregroundStyle(Color(red: 43 / 255, green: 30 / 255, blue: 134 / 255))
-        .frame(maxWidth: .infinity, minHeight: 56)
+        .fixedSize(horizontal: !fillsWidth, vertical: false)
+        .padding(.horizontal, fillsWidth ? 0 : 30)
+        .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: 56)
         .background(LabColor.primaryButton, in: RoundedRectangle(cornerRadius: 28))
         .shadow(color: .black.opacity(0.35), radius: 16, y: 6)
         .contentShape(RoundedRectangle(cornerRadius: 28))
@@ -28,13 +31,44 @@ private struct PrimaryLabButtonStyle: ButtonStyle {
 
 struct QuietLabButton: View {
   var title: String
+  var systemImage: String?
   var action: () -> Void
 
   var body: some View {
-    Button(title, action: action)
-      .font(LabFont.label)
-      .foregroundStyle(LabColor.primaryInk)
-      .frame(minHeight: 44)
+    Group {
+      if let systemImage {
+        Button(title, systemImage: systemImage, action: action)
+      } else {
+        Button(title, action: action)
+      }
+    }
+    .font(LabFont.label)
+    .foregroundStyle(LabColor.primaryInk)
+    .fixedSize()
+    .padding(.horizontal, 8)
+    .frame(minHeight: 56)
+    .contentShape(Rectangle())
+  }
+}
+
+/// A secondary action that isn’t the step’s forward move, on a glass capsule.
+struct GlassLabButton: View {
+  var title: String
+  var action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(LabFont.label)
+        .foregroundStyle(LabColor.primaryInk)
+        .fixedSize()
+        .padding(.horizontal, 28)
+        .frame(minHeight: 56)
+        .background(.white.opacity(0.09), in: Capsule())
+        .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+        .contentShape(Capsule())
+    }
+    .buttonStyle(PrimaryLabButtonStyle())
   }
 }
 

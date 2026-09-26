@@ -47,9 +47,9 @@ final class HingeModel {
     }
   }
 
-  func setDialAngle(_ value: Double) {
+  func setDialAngle(_ value: Double, animation: Animation = LabMotion.hinge) {
     source = .dial
-    withAnimation(LabMotion.hinge) {
+    withAnimation(animation) {
       angle = min(180, max(40, value))
     }
   }
