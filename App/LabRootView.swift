@@ -18,9 +18,10 @@ struct LabRootView: View {
   @State private var route: LabRoute?
   @State private var justFinished: RoomID?
   @State private var doorOpensAtOnce = false
+  @State private var grownUps = GrownUpsFlow()
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $grownUps.path) {
       Group {
         switch route {
         case .outerWelcome:
@@ -30,8 +31,14 @@ struct LabRootView: View {
           WelcomeView(isOuter: false, action: enterDoor)
             .toolbar(.hidden, for: .navigationBar)
         case .journey:
-          JourneyView(model: model, justFinished: justFinished, start: openRoom)
-            .toolbar(.hidden, for: .navigationBar)
+          JourneyView(
+            model: model,
+            justFinished: justFinished,
+            start: openRoom,
+            askGrownUp: grownUps.askForPlus,
+            openGrownUps: grownUps.openGrownUps
+          )
+          .toolbar(.hidden, for: .navigationBar)
         case .door(let room):
           DoorView(
             room: room,
@@ -61,7 +68,9 @@ struct LabRootView: View {
             .toolbar(.hidden, for: .navigationBar)
         }
       }
+      .grownUpsDestinations(grownUps)
     }
+    .grownUpsPaywall(grownUps)
     .tint(LabColor.retry)
     .onAppear {
       guard route == nil else { return }
