@@ -32,6 +32,25 @@ struct LabHomeView: View {
           .padding(20)
           .background(.quaternary, in: RoundedRectangle(cornerRadius: 18))
 
+          NavigationLink {
+            GlassPondView()
+          } label: {
+            VStack(alignment: .leading, spacing: 8) {
+              Label("The Glass Pond", systemImage: "water.waves")
+                .font(.headline)
+              Text("Tilt Lumi’s light, discover the tipping point, and wake the moon lily.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+              Text("Play Room 2")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.tint)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+            .background(.quaternary, in: RoundedRectangle(cornerRadius: 18))
+            .contentShape(RoundedRectangle(cornerRadius: 18))
+          }
+          .buttonStyle(.plain)
         }
         .frame(maxWidth: 600, alignment: .leading)
         .frame(maxWidth: .infinity)
