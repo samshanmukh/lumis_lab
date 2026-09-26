@@ -57,7 +57,7 @@ struct MarbleStepPanel: View {
       VStack(alignment: .leading, spacing: 12) {
         title("The firefly woke up!")
         line("A steeper ramp lifted the start higher, so the marble rolled farther.")
-        FireflyRow(earned: room.app.state(MarbleRampModel.room).fireflies)
+        FireflyRow(earned: room.app.room(MarbleRampModel.room).fireflies)
           .padding(.top, 10)
       }
     default:
@@ -71,7 +71,7 @@ struct MarbleStepPanel: View {
   private func readout(status: String?) -> some View {
     VStack(alignment: .leading, spacing: 0) {
       if room.usesDial {
-        AngleDial(rampFor: room.hinge)
+        AngleDial(hinge: room.hinge, scale: .rampTilt)
           .disabled(room.isRolling || room.isDemoPlaying)
           .opacity(room.isDemoPlaying ? 0.45 : 1)
           .padding(.top, 18)
@@ -143,7 +143,7 @@ struct MarbleStepPanel: View {
   }
 
   private var checkChips: some View {
-    ForEach(MarbleRampModel.rampChoices) { option in
+    ForEach(MarbleRampModel.rampChoices, id: \.choice) { option in
       ChoiceChip(
         title: option.title,
         outline: .capsule,
@@ -159,7 +159,7 @@ struct MarbleStepPanel: View {
     switch room.checkOutcome {
     case .right where room.checkPick == choice: .right
     case .wrong where room.checkPick == choice: .wrong
-    case .revealed where choice == .word("same"): .revealed
+    case .revealed where choice == .option("same"): .revealed
     default: .rest
     }
   }

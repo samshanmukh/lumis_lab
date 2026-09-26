@@ -2,27 +2,40 @@ import SwiftUI
 
 struct JourneyView: View {
   var model: AppModel
-  var lightNewFireflies = false
+  /// The room just finished: its fireflies light one by one.
+  var justFinished: RoomID?
   var start: (RoomID) -> Void
+  var askGrownUp: (RoomID) -> Void
+  var openGrownUps: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(SubscriptionStore.self) private var subscriptions
   @State private var nudgedRoom: RoomID?
   @State private var litFireflies = 3
 
   private enum StopState {
     case current
     case done
-    case comingSoon
     case locked
+    /// Part of Lumi’s Lab Plus, which this family doesn’t have yet.
+    case plus
+  }
+
+  /// Bottom to top in journey order; a locked stop says which room it follows.
+  private var stops: [(room: RoomID, subtitle: String)] {
+    RoomID.allCases.reversed().map { room in
+      (room, room.previous.map { "After the \($0.shortTitle)" } ?? room.question)
+    }
   }
 
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          Text("Lumi’s journey")
-            .font(LabFont.display)
-            .foregroundStyle(LabColor.primaryInk)
-            .padding(.bottom, 12)
+          ViewThatFits(in: .horizontal) {
+            header(compactGrownUps: false)
+            header(compactGrownUps: true)
+          }
+          .padding(.bottom, 12)
 
           Text("\(model.earnedFireflies) of 12 fireflies")
             .font(LabFont.caption)
@@ -30,12 +43,11 @@ struct JourneyView: View {
             .contentTransition(.numericText())
             .padding(.bottom, 28)
 
-          let rooms = Array(RoomID.allCases.reversed())
-          ForEach(Array(rooms.enumerated()), id: \.element) { index, room in
-            stopView(room)
-              .id(room)
-            if index + 1 < rooms.count {
-              dottedTrail(active: model.state(rooms[index + 1]).solved)
+          ForEach(stops, id: \.room) { stop in
+            stopView(stop.room, subtitle: stop.subtitle)
+              .id(stop.room)
+            if let below = stop.room.previous {
+              dottedTrail(active: model.room(below).solved)
                 .padding(.leading, 53)
             }
           }
@@ -58,46 +70,32 @@ struct JourneyView: View {
     .task { await lightFireflies() }
   }
 
+  /// A room is current once the one before it is done; the first room is current from the start.
   private func state(for room: RoomID) -> StopState {
-    if model.state(room).solved { return .done }
-    if model.isStartable(room) { return .current }
-    let before = RoomID.allCases.prefix { $0 != room }
-    if !room.isBuilt, before.last.map({ model.state($0).solved }) ?? true { return .comingSoon }
-    return .locked
-  }
-
-  private func subtitle(for room: RoomID) -> String {
-    switch state(for: room) {
-    case .comingSoon: return "Coming soon"
-    case .current:
-      switch room {
-      case .mirror: return "How many Lumis can two mirrors make?"
-      case .marbleRamp: return "Can Lumi’s marble roll far enough?"
-      default: return ""
-      }
-    default:
-      // A room opens after the last playable room before it.
-      let before = RoomID.allCases.prefix { $0 != room }
-      guard let previous = room.isBuilt ? before.last(where: \.isBuilt) : before.last else { return "" }
-      return "After \(previous.title)"
-    }
+    if room.needsPlus && !subscriptions.isPro { return .plus }
+    if model.room(room).solved { return .done }
+    if let before = room.previous, !model.room(before).solved { return .locked }
+    return .current
   }
 
   @ViewBuilder
-  private func stopView(_ room: RoomID) -> some View {
+  private func stopView(_ room: RoomID, subtitle: String) -> some View {
     switch state(for: room) {
     case .done:
       doneStop(room)
     case .current:
-      currentStop(room)
-    case .comingSoon, .locked:
-      lockedStop(room)
+      currentStop(room, subtitle: room.question, startable: room.isPlayable)
+    case .locked:
+      // With Plus, Launch Angle is open but not built yet.
+      lockedStop(room, subtitle: room.needsPlus ? "Coming soon" : subtitle)
+    case .plus:
+      plusStop(room)
     }
   }
 
-  private func currentStop(_ room: RoomID) -> some View {
+  private func currentStop(_ room: RoomID, subtitle: String, startable: Bool) -> some View {
     Button {
-      start(room)
+      if startable { start(room) } else { nudge(room) }
     } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 116)
@@ -107,28 +105,42 @@ struct JourneyView: View {
           Text(room.title)
             .font(.system(.title2, design: .rounded, weight: .semibold))
             .foregroundStyle(LabColor.primaryInk)
-          Text(subtitle(for: room))
-            .font(LabFont.caption)
-            .foregroundStyle(LabColor.secondaryInk)
-            .fixedSize(horizontal: false, vertical: true)
-          startPill
-            .padding(.top, 10)
+          if startable {
+            Text(subtitle)
+              .font(LabFont.caption)
+              .foregroundStyle(LabColor.secondaryInk)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          Group {
+            if startable {
+              startPill
+            } else {
+              Text("Coming soon")
+                .font(LabFont.label)
+                .fixedSize()
+                .foregroundStyle(LabColor.secondaryInk)
+                .padding(.horizontal, 28)
+                .frame(height: 52)
+                .background(.white.opacity(0.08), in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+            }
+          }
+          .padding(.top, 10)
         }
         Spacer(minLength: 0)
       }
+      .offset(x: nudgedRoom == room ? 6 : 0)
       .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(room.title), \(subtitle(for: room))")
-    .accessibilityHint("Opens \(room.title)")
+    .accessibilityLabel(startable ? "\(room.title), \(subtitle)" : "\(room.title), coming soon")
+    .accessibilityHint(startable ? "Opens the \(room.title)" : "")
   }
 
   private func doneStop(_ room: RoomID) -> some View {
-    let earned = model.state(room).fireflies
-    return Button {
-      start(room)
-    } label: {
+    let earned = model.room(room).fireflies
+    return Button { start(room) } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 88)
           .shadow(color: LabColor.glow.opacity(0.35), radius: 14)
@@ -138,7 +150,7 @@ struct JourneyView: View {
           Text(room.title)
             .font(LabFont.label)
             .foregroundStyle(LabColor.primaryInk)
-          FireflyRow(earned: earned, size: 24, lightCount: litFireflies)
+          FireflyRow(earned: earned, size: 24, lightCount: room == justFinished ? litFireflies : 3)
           startPill
             .padding(.top, 4)
         }
@@ -152,7 +164,7 @@ struct JourneyView: View {
     .accessibilityHint("Starts the room again from its door")
   }
 
-  private func lockedStop(_ room: RoomID) -> some View {
+  private func lockedStop(_ room: RoomID, subtitle: String) -> some View {
     Button {
       nudge(room)
     } label: {
@@ -166,7 +178,7 @@ struct JourneyView: View {
           Text(room.title)
             .font(LabFont.label)
             .foregroundStyle(LabColor.secondaryInk)
-          Text(subtitle(for: room))
+          Text(subtitle)
             .font(LabFont.caption)
             .foregroundStyle(LabColor.tertiaryInk)
             .fixedSize(horizontal: false, vertical: true)
@@ -178,8 +190,84 @@ struct JourneyView: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(room.title), \(subtitle(for: room))")
-    .accessibilityHint("Not open yet")
+    .accessibilityLabel("\(room.title), \(subtitle)")
+    .accessibilityHint("Coming later")
+  }
+
+  /// 7.1 · A Plus room shows a lemon lock and who can open it, never a price.
+  private func plusStop(_ room: RoomID) -> some View {
+    Button {
+      askGrownUp(room)
+    } label: {
+      HStack(alignment: .center, spacing: 24) {
+        RoomVignetteView(room: room, size: 88)
+          .background(Circle().fill(LabColor.backgroundBottom))
+          .opacity(0.5)
+          .overlay(alignment: .topTrailing) {
+            PlusLockBadge()
+              .offset(x: 4)
+          }
+          .frame(width: 116)
+
+        VStack(alignment: .leading, spacing: 5) {
+          Text(room.title)
+            .font(LabFont.label)
+            .foregroundStyle(LabColor.primaryInk)
+          Text("Part of Lumi’s Lab Plus. Ask a grown-up to open it.")
+            .font(LabFont.caption)
+            .foregroundStyle(LabColor.secondaryInk)
+            .fixedSize(horizontal: false, vertical: true)
+          Text("Ask a grown-up")
+            .font(LabFont.label)
+            .fixedSize()
+            .foregroundStyle(LabColor.primaryInk)
+            .padding(.horizontal, 28)
+            .frame(height: 56)
+            .glassCapsule()
+            .padding(.top, 10)
+        }
+        Spacer(minLength: 0)
+      }
+      .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(room.title), part of Lumi’s Lab Plus, locked")
+    .accessibilityHint("Asks a grown-up to open it")
+  }
+
+  /// The title with Grown-ups beside it; the button drops its words where the title would wrap.
+  private func header(compactGrownUps: Bool) -> some View {
+    HStack(spacing: 16) {
+      Text("Lumi’s journey")
+        .font(LabFont.display)
+        .foregroundStyle(LabColor.primaryInk)
+      Spacer(minLength: 0)
+      grownUpsButton(compact: compactGrownUps)
+    }
+  }
+
+  /// Opens the parental gate, then everything a grown-up manages.
+  private func grownUpsButton(compact: Bool) -> some View {
+    Button(action: openGrownUps) {
+      Group {
+        if compact {
+          Image(systemName: "person.crop.circle")
+            .frame(width: 44, height: 44)
+        } else {
+          Label("Grown-ups", systemImage: "person.crop.circle")
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+        }
+      }
+      .font(.system(.subheadline, design: .rounded, weight: .semibold))
+      .foregroundStyle(LabColor.primaryInk)
+      .fixedSize()
+      .glassCapsule()
+      .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("Grown-ups")
   }
 
   private var startPill: some View {
@@ -204,7 +292,7 @@ struct JourneyView: View {
 
   /// roomExit: the finished stop’s fireflies light one by one.
   private func lightFireflies() async {
-    guard lightNewFireflies, !reduceMotion else { return }
+    guard justFinished != nil, !reduceMotion else { return }
     litFireflies = 0
     try? await Task.sleep(for: .milliseconds(450))
     for count in 1...3 {
@@ -224,5 +312,18 @@ struct JourneyView: View {
     }
     .frame(height: 68)
     .accessibilityHidden(true)
+  }
+}
+
+/// A small lemon lock on a Plus room’s stop.
+private struct PlusLockBadge: View {
+  var body: some View {
+    Image(systemName: "lock.fill")
+      .font(.system(size: 12, weight: .bold))
+      .foregroundStyle(LabColor.label)
+      .frame(width: 30, height: 30)
+      .background(LabColor.labelSurface.opacity(0.9), in: Circle())
+      .overlay(Circle().strokeBorder(LabColor.label, lineWidth: 1.2))
+      .accessibilityHidden(true)
   }
 }

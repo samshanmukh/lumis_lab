@@ -6,6 +6,8 @@ struct MirrorRoomView: View {
   var room: MirrorRoomModel
   var map: () -> Void
   var leave: () -> Void
+  /// On to the Glass Pond’s door from the room’s end; true when its door was tapped there.
+  var enterNext: ((Bool) -> Void)? = nil
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var sceneSlot: CGRect = .zero
@@ -60,13 +62,7 @@ struct MirrorRoomView: View {
           checkpointLayer(size: size, insets: insets, foldX: foldX, wide: wide)
             .transition(.opacity)
         } else if room.step == .roomEnd {
-          RoomEndView(
-            finished: .mirror,
-            fireflies: room.app.fireflies,
-            solved: room.app.solvedRooms,
-            split: FoldSplit(size: size, insets: insets, foldX: foldX, gap: 40, tallFirstShare: 0.55),
-            leave: leave
-          )
+          RoomEndView(finished: .mirror, app: room.app, split: FoldSplit(size: size, insets: insets, foldX: foldX, gap: 40, tallFirstShare: 0.55), leave: leave, enterNext: enterNext)
             .transition(.opacity)
         } else {
           sceneLayer(size: size, insets: insets, foldX: foldX, wide: wide, scene: scene)
@@ -109,14 +105,7 @@ struct MirrorRoomView: View {
       }
       .offset(x: split.first.minX + 24, y: split.first.minY + 20)
 
-      CheckpointBoard(
-        question: room.checkpointQuestion,
-        state: room.checkpoint,
-        feedback: room.checkpointFeedback,
-        answer: { room.answer($0) },
-        forward: { room.checkpointForward() },
-        seeIt: { playSeeIt(art: art) }
-      )
+      CheckpointBoard(room: room) { playSeeIt(art: art) }
         .padding(boardInsets)
         .place(in: split.second)
         .offset(x: seeIt.boardAway ? size.width * 0.55 : 0)
@@ -239,7 +228,7 @@ struct MirrorRoomView: View {
       let height = size.height * 0.62
       frame = CGRect(x: insets.leading + 12, y: size.height - insets.bottom - 12 - height, width: size.width - insets.leading - insets.trailing - 24, height: height)
     }
-    return MathPanel.mirror(liveAngle: room.hinge.mirrorAngle) { showMath(false) }
+    return MathPanel(liveValue: room.hinge.mirrorAngle) { showMath(false) }
       .frame(width: frame.width, height: frame.height)
       .offset(x: frame.minX, y: frame.minY)
       .transition(reduceMotion ? .opacity : .move(edge: wide ? .trailing : .bottom).combined(with: .opacity))

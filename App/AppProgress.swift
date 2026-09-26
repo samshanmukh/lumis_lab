@@ -25,49 +25,62 @@ enum RoomID: String, Codable, CaseIterable, Identifiable {
     }
   }
 
-  /// The number on the room’s door sign.
-  var number: Int {
-    switch self {
-    case .mirror: 1
-    case .glassPond: 2
-    case .marbleRamp: 3
-    case .launchAngle: 4
-    }
-  }
-
-  var story: String {
-    switch self {
-    case .mirror: "Lumi is alone in the dark. Can mirrors make friends for her?"
-    case .glassPond: "A moon lily is asleep under the glass. Can Lumi’s light reach it?"
-    case .marbleRamp: "A firefly fell asleep at the end of the path. Can Lumi’s marble roll far enough to wake it?"
-    case .launchAngle: "The moon bed is far away. Can Lumi throw her light into it?"
-    }
-  }
-
-  /// Rooms that can be played in this build. The others show “Coming soon”.
-  var isBuilt: Bool {
-    switch self {
-    case .mirror, .marbleRamp: true
-    case .glassPond, .launchAngle: false
-    }
-  }
-
-  /// Rooms played like a laptop: the door turns on its side before it opens.
-  var isLaptopRoom: Bool { self != .mirror }
-
-  /// The next room along the journey, if any.
-  var next: RoomID? {
-    let all = Self.allCases
-    guard let index = all.firstIndex(of: self), index + 1 < all.count else { return nil }
-    return all[index + 1]
-  }
-
   var vignetteName: String {
     switch self {
     case .mirror: "MirrorVignette"
     case .glassPond: "GlassVignette"
     case .marbleRamp: "MarbleVignette"
     case .launchAngle: "LaunchVignette"
+    }
+  }
+
+  var number: Int { (Self.allCases.firstIndex(of: self) ?? 0) + 1 }
+
+  /// The name after “the”, as in “After the Glass Pond”.
+  var shortTitle: String {
+    switch self {
+    case .mirror: "Mirror Room"
+    case .glassPond: "Glass Pond"
+    case .marbleRamp: "Marble Ramp"
+    case .launchAngle: "Launch Angle"
+    }
+  }
+
+  /// Rooms built so far. The others show on the journey but can’t be started yet.
+  var isPlayable: Bool { self != .launchAngle }
+
+  /// Book rooms open straight from the closed phone; laptop rooms turn sideways first.
+  var playsLikeLaptop: Bool { self != .mirror }
+
+  var next: RoomID? {
+    let rooms = Self.allCases
+    guard let index = rooms.firstIndex(of: self), index + 1 < rooms.count else { return nil }
+    return rooms[index + 1]
+  }
+
+  var previous: RoomID? {
+    let rooms = Self.allCases
+    guard let index = rooms.firstIndex(of: self), index > 0 else { return nil }
+    return rooms[index - 1]
+  }
+
+  /// The journey’s question for the room you can start next.
+  var question: String {
+    switch self {
+    case .mirror: "How many Lumis can two mirrors make?"
+    case .glassPond: "Can light get stuck in glass?"
+    case .marbleRamp: "Can Lumi’s marble roll far enough?"
+    case .launchAngle: ""
+    }
+  }
+
+  /// The story line above the room’s door.
+  var storyLine: String {
+    switch self {
+    case .mirror: "Lumi is alone in the dark. Can mirrors make friends for her?"
+    case .glassPond: "Lumi fell into a pond of magic glass. Can her light wake the moon lily?"
+    case .marbleRamp: "A firefly fell asleep at the end of the path. Can Lumi’s marble roll far enough to wake it?"
+    case .launchAngle: "The moon bed is far away. Can Lumi throw her light into it?"
     }
   }
 }

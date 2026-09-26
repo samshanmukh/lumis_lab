@@ -5,8 +5,7 @@ private enum LabRoute: Equatable {
   case innerWelcome
   case journey
   case door(RoomID)
-  case mirror
-  case marbleRamp
+  case room(RoomID)
 }
 
 struct LabRootView: View {
@@ -15,43 +14,67 @@ struct LabRootView: View {
   @State private var model = AppModel()
   @State private var hinge = HingeModel()
   @State private var mirrorRoom: MirrorRoomModel?
+  @State private var pondRoom: GlassPondModel?
   @State private var marbleRoom: MarbleRampModel?
   @State private var route: LabRoute?
-  @State private var returningFromRoom = false
+  @State private var justFinished: RoomID?
+  @State private var doorOpensAtOnce = false
+  @State private var grownUps = GrownUpsFlow()
 
   var body: some View {
-    NavigationStack {
+    NavigationStack(path: $grownUps.path) {
       Group {
         switch route {
         case .outerWelcome:
-          WelcomeView(isOuter: true) { enterDoor(.mirror) }
+          WelcomeView(isOuter: true, action: enterDoor)
             .toolbar(.hidden, for: .navigationBar)
         case .innerWelcome:
-          WelcomeView(isOuter: false) { enterDoor(.mirror) }
+          WelcomeView(isOuter: false, action: enterDoor)
             .toolbar(.hidden, for: .navigationBar)
         case .journey:
-          JourneyView(model: model, lightNewFireflies: returningFromRoom, start: openRoom)
-            .toolbar(.hidden, for: .navigationBar)
+          JourneyView(
+            model: model,
+            justFinished: justFinished,
+            start: openRoom,
+            askGrownUp: grownUps.askForPlus,
+            openGrownUps: grownUps.openGrownUps
+          )
+          .toolbar(.hidden, for: .navigationBar)
         case .door(let room):
-          DoorView(room: room, hinge: hinge, showsHint: !model.state(room).solved, goToMap: showMap) {
-            enterRoom(room)
-          }
+          DoorView(
+            room: room,
+            hinge: hinge,
+            showsHint: !model.room(room).solved,
+            opensAtOnce: doorOpensAtOnce,
+            goToMap: showMap,
+            enterRoom: { enter(room) }
+          )
           .id(room)
           .toolbar(.hidden, for: .navigationBar)
-        case .mirror:
+        case .room(.mirror):
           if let mirrorRoom {
-            MirrorRoomView(room: mirrorRoom, map: showMap, leave: exitRoom)
+            MirrorRoomView(room: mirrorRoom, map: showMap, leave: exitRoom) { tapped in
+              goToDoor(.glassPond, opensAtOnce: tapped)
+            }
           }
-        case .marbleRamp:
+        case .room(.glassPond):
+          if let pondRoom {
+            GlassPondView(room: pondRoom, map: showMap, leave: exitRoom) { tapped in
+              goToDoor(.marbleRamp, opensAtOnce: tapped)
+            }
+          }
+        case .room(.marbleRamp):
           if let marbleRoom {
             MarbleRampView(room: marbleRoom, map: showMap, leave: exitRoom)
           }
-        case nil:
+        case .room, nil:
           Color.clear
             .toolbar(.hidden, for: .navigationBar)
         }
       }
+      .grownUpsDestinations(grownUps)
     }
+    .grownUpsPaywall(grownUps)
     .tint(LabColor.retry)
     .onAppear {
       guard route == nil else { return }
@@ -67,54 +90,66 @@ struct LabRootView: View {
     .hingeInput(hinge)
   }
 
-  private func enterDoor(_ room: RoomID) {
+  private func enterDoor() {
     model.markWelcomeSeen()
-    model.setStep(.door, room: room)
-    withAnimation(LabMotion.room) { route = .door(room) }
+    model.setStep(.door, room: .mirror)
+    withAnimation(LabMotion.room) { route = .door(.mirror) }
   }
 
-  private func enterRoom(_ room: RoomID) {
+  private func enter(_ room: RoomID) {
     model.setStep(.checkpoint1, room: room)
-    show(room)
+    makeModel(for: room)
+    doorOpensAtOnce = false
+    withAnimation(LabMotion.step) { route = .room(room) }
+  }
+
+  private func makeModel(for room: RoomID) {
+    switch room {
+    case .mirror: mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
+    case .glassPond: pondRoom = GlassPondModel(app: model, hinge: hinge)
+    case .marbleRamp: marbleRoom = MarbleRampModel(app: model, hinge: hinge)
+    case .launchAngle: break
+    }
   }
 
   /// Start resumes the saved step; a finished room replays from its door, keeping its fireflies.
   private func openRoom(_ room: RoomID) {
-    returningFromRoom = false
-    guard room.isBuilt else { return }
-    if model.state(room).solved {
+    guard room.isPlayable else { return }
+    justFinished = nil
+    doorOpensAtOnce = false
+    if model.room(room).solved {
       model.setStep(.door, room: room)
     }
-    if model.state(room).step == .door {
+    if model.room(room).step == .door {
       withAnimation(LabMotion.room) { route = .door(room) }
     } else {
-      show(room)
+      makeModel(for: room)
+      withAnimation(LabMotion.room) { route = .room(room) }
     }
   }
 
-  private func show(_ room: RoomID) {
-    switch room {
-    case .mirror:
-      mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
-      withAnimation(LabMotion.room) { route = .mirror }
-    case .marbleRamp:
-      marbleRoom = MarbleRampModel(app: model, hinge: hinge)
-      withAnimation(LabMotion.room) { route = .marbleRamp }
-    case .glassPond, .launchAngle:
-      break
-    }
+  /// From a room’s end straight to the next room’s door; a tap there opens it by itself.
+  private func goToDoor(_ room: RoomID, opensAtOnce: Bool) {
+    model.setStep(.door, room: room)
+    justFinished = nil
+    doorOpensAtOnce = opensAtOnce
+    withAnimation(LabMotion.room) { route = .door(room) }
+    mirrorRoom = nil
+    pondRoom = nil
+    marbleRoom = nil
   }
 
   private func showMap() {
-    returningFromRoom = false
+    justFinished = nil
     withAnimation(LabMotion.room) { route = .journey }
   }
 
-  /// roomExit: back to the journey, where the new fireflies light one by one.
+  /// roomExit: back to the journey, where the finished room’s fireflies light one by one.
   private func exitRoom() {
-    returningFromRoom = true
+    if case .room(let room) = route { justFinished = room }
     withAnimation(LabMotion.room) { route = .journey }
     mirrorRoom = nil
+    pondRoom = nil
     marbleRoom = nil
   }
 }

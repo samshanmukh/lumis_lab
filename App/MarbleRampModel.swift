@@ -5,7 +5,7 @@ import Observation
 /// a marble rolls, then use it to wake the firefly from the top of the ramp.
 @MainActor
 @Observable
-final class MarbleRampModel {
+final class MarbleRampModel: CheckpointRoom {
   static let room: RoomID = .marbleRamp
   /// Two rolls at least this far apart count as “a gentle one and a steep one”.
   static let tryItSpread: Double = 20
@@ -47,13 +47,13 @@ final class MarbleRampModel {
   init(app: AppModel, hinge: HingeModel) {
     self.app = app
     self.hinge = hinge
-    let saved = app.state(Self.room).step
+    let saved = app.room(Self.room).step
     step = saved == .door || saved == .roomEnd ? .checkpoint1 : saved
     if step == .check || step == .why { tryRolls = Self.exampleRolls }
     scheduleAutoHint()
   }
 
-  private var state: RoomState { app.state(Self.room) }
+  private var state: RoomState { app.room(Self.room) }
 
   // MARK: Ramp
 
@@ -173,34 +173,34 @@ final class MarbleRampModel {
       CheckpointQuestion(
         title: "Starting from the very top, which rolls farther?",
         options: [
-          CheckpointOption(choice: .word("steeper"), title: "Steeper ramp"),
-          CheckpointOption(choice: .word("gentler"), title: "Gentler ramp"),
-          CheckpointOption(choice: .word("same"), title: "Same spot")
-        ],
-        style: .words,
-        forwardTitle: "Next: \(RoomID.launchAngle.title)"
+          CheckpointOption(choice: .option("steeper"), title: "Steeper ramp", outline: .capsule),
+          CheckpointOption(choice: .option("gentler"), title: "Gentler ramp", outline: .capsule),
+          CheckpointOption(choice: .option("same"), title: "Same spot", outline: .capsule)
+        ]
       )
     } else {
       CheckpointQuestion(
         title: "Which marble rolls farther?",
         detail: "Both start at the star.",
-        options: Self.rampChoices,
-        style: .words,
-        forwardTitle: "Next"
+        options: Self.rampChoices
       )
     }
   }
 
+  var checkpointForwardTitle: String {
+    step == .checkpoint1 ? "Next" : "Next: \(RoomID.launchAngle.title)"
+  }
+
   static let rampChoices = [
-    CheckpointOption(choice: .word("steep"), title: "Steep ramp"),
-    CheckpointOption(choice: .word("gentle"), title: "Gentle ramp"),
-    CheckpointOption(choice: .word("same"), title: "Same spot")
+    CheckpointOption(choice: .option("steep"), title: "Steep ramp", outline: .capsule),
+    CheckpointOption(choice: .option("gentle"), title: "Gentle ramp", outline: .capsule),
+    CheckpointOption(choice: .option("same"), title: "Same spot", outline: .capsule)
   ]
 
   func answer(_ choice: CheckpointChoice) {
     guard checkpoint.outcome == nil else { return }
     let isFirst = step == .checkpoint1
-    let right: CheckpointChoice = isFirst ? .word("same") : .word("steeper")
+    let right: CheckpointChoice = isFirst ? .option("same") : .option("steeper")
     let outcome: CheckpointOutcome = choice == .notSure ? .notSure : (choice == right ? .right : .wrong)
 
     withAnimation(.easeOut(duration: 0.2)) {
@@ -249,7 +249,7 @@ final class MarbleRampModel {
   func answerCheck(_ choice: CheckpointChoice) {
     guard checkOutcome != .right, checkOutcome != .revealed else { return }
     checkPick = choice
-    if choice == .word("same") {
+    if choice == .option("same") {
       withAnimation(.easeOut(duration: 0.2)) { checkOutcome = .right }
       successTick += 1
       app.updateRoom(Self.room) { $0.fireflies.insert(.answer) }
@@ -262,7 +262,7 @@ final class MarbleRampModel {
     if checkWrongTries >= 2 {
       withAnimation(.easeOut(duration: 0.2)) {
         checkOutcome = .revealed
-        checkPick = .word("same")
+        checkPick = .option("same")
       }
       announce("It’s the same spot. Let’s find out why.")
     } else {

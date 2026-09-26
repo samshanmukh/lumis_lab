@@ -1,16 +1,72 @@
 import SwiftUI
 
-/// Show the math: the rule and a table to test it with. The current row follows the live angle.
-struct MathPanel: View {
+/// A room’s math sheet: the rule, one plain sentence, and a table to test it with.
+struct MathSheet {
+  struct Row {
+    /// The live value this row stands for; the nearest row is the current one.
+    var key: Double
+    var left: String
+    var right: String
+    var spoken: String
+  }
+
   var formula: String
+  var formulaInk: Color
   var explanation: String
-  var columns: (leading: String, trailing: String)
-  var rows: [MathRow]
-  var liveAngle: Double
+  var columns: (left: String, right: String)
+  var rows: [Row]
+
+  static let mirror = MathSheet(
+    formula: "Lumis = 360° ÷ angle",
+    formulaInk: LabColor.lumi,
+    explanation: "A circle is 360°. Each slice is as wide as the mirror angle, and each slice holds one Lumi. That count includes the real Lumi, so reflections = 360° ÷ angle − 1.",
+    columns: ("Angle", "Lumis"),
+    rows: [(180, 2), (120, 3), (90, 4), (72, 5), (60, 6), (45, 8)].map { angle, lumis in
+      Row(key: Double(angle), left: "\(angle)°", right: "\(lumis)", spoken: "\(angle) degrees, \(lumis) Lumis")
+    }
+  )
+
+  /// The Glass Pond: Snell’s law with n = 1.5, glass angle to air angle.
+  static let pond = MathSheet(
+    formula: "1.5 × sin(glass angle) = sin(air angle)",
+    formulaInk: LabColor.glassAqua,
+    explanation: "Glass bends light. When the air angle would pass 90°, the light can’t leave. (Water tips at about 49°, diamond at 24°.)",
+    columns: ("Glass angle", "Air angle"),
+    rows: [
+      Row(key: 10, left: "10°", right: "15°", spoken: "10 degrees in glass, 15 degrees in air"),
+      Row(key: 20, left: "20°", right: "31°", spoken: "20 degrees in glass, 31 degrees in air"),
+      Row(key: 30, left: "30°", right: "49°", spoken: "30 degrees in glass, 49 degrees in air"),
+      Row(key: 40, left: "40°", right: "75°", spoken: "40 degrees in glass, 75 degrees in air"),
+      Row(key: GlassOptics.criticalAngle, left: "41.8°", right: "90° · skims", spoken: "41.8 degrees in glass, 90 degrees, it skims the surface"),
+      Row(key: 48, left: "48°", right: "stays inside", spoken: "48 degrees in glass, the light stays inside")
+    ]
+  )
+
+  /// The Marble Ramp: speed at the bottom = √(10/7 × g × height), for a 10 cm drop.
+  static let marbleRamp = MathSheet(
+    formula: "speed at the bottom = √(10/7 × g × height)",
+    formulaInk: LabColor.lumi,
+    explanation: "Height turns into speed. The angle isn’t in the formula, so from the same height every smooth ramp gives the same speed. Steeper just gets there sooner.",
+    columns: ("Ramp (10 cm drop)", "Time down · speed at the bottom"),
+    rows: [(15, "0.65"), (20, "0.49"), (30, "0.34"), (40, "0.26"), (45, "0.24"), (50, "0.22")].map { angle, time in
+      Row(
+        key: Double(angle),
+        left: "\(angle)°",
+        right: "\(time) s · 1.2 m/s",
+        spoken: "\(angle) degrees, \(time) seconds down, 1.2 meters per second at the bottom"
+      )
+    }
+  )
+}
+
+/// Show the math: the rule and a table to test it with. The current row follows the live value.
+struct MathPanel: View {
+  var sheet = MathSheet.mirror
+  var liveValue: Double
   var done: () -> Void
 
   var body: some View {
-    let current = rows.min { abs($0.angle - liveAngle) < abs($1.angle - liveAngle) }?.angle
+    let current = sheet.rows.indices.min { abs(sheet.rows[$0].key - liveValue) < abs(sheet.rows[$1].key - liveValue) }
 
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
@@ -26,22 +82,22 @@ struct MathPanel: View {
             .frame(minWidth: 44, minHeight: 44)
         }
 
-        Text(formula)
+        Text(sheet.formula)
           .font(.system(.title2, design: .rounded, weight: .semibold))
-          .foregroundStyle(LabColor.lumi)
+          .foregroundStyle(sheet.formulaInk)
           .fixedSize(horizontal: false, vertical: true)
           .padding(.top, 10)
 
-        Text(explanation)
+        Text(sheet.explanation)
           .font(.system(.subheadline, design: .rounded))
           .foregroundStyle(LabColor.secondaryInk)
           .fixedSize(horizontal: false, vertical: true)
           .padding(.top, 10)
 
         HStack {
-          Text(columns.leading)
+          Text(sheet.columns.left)
           Spacer()
-          Text(columns.trailing)
+          Text(sheet.columns.right)
         }
         .font(LabFont.caption)
         .foregroundStyle(LabColor.tertiaryInk)
@@ -50,12 +106,13 @@ struct MathPanel: View {
         .padding(.bottom, 6)
         .accessibilityHidden(true)
 
-        ForEach(rows) { row in
-          let isCurrent = row.angle == current
+        ForEach(sheet.rows.indices, id: \.self) { index in
+          let row = sheet.rows[index]
+          let isCurrent = index == current
           HStack {
-            Text("\(Int(row.angle))°")
+            Text(row.left)
             Spacer()
-            Text(row.value)
+            Text(row.right)
           }
           .font(.system(.body, design: .rounded, weight: .semibold))
           .monospacedDigit()
@@ -64,13 +121,13 @@ struct MathPanel: View {
           .frame(minHeight: 44)
           .background(isCurrent ? .white.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
           .overlay(alignment: .bottom) {
-            if !isCurrent && row.id != rows.last?.id {
+            if !isCurrent && index != sheet.rows.count - 1 {
               Rectangle().fill(.white.opacity(0.1)).frame(height: 1).padding(.horizontal, 12)
             }
           }
           .animation(.snappy, value: isCurrent)
           .accessibilityElement(children: .ignore)
-          .accessibilityLabel("\(Int(row.angle)) degrees, \(row.spokenValue)")
+          .accessibilityLabel(row.spoken)
           .accessibilityAddTraits(isCurrent ? .isSelected : [])
         }
       }
@@ -78,47 +135,10 @@ struct MathPanel: View {
     }
     .scrollBounceBehavior(.basedOnSize)
     .background(LabColor.panel.opacity(0.96), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
     .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).strokeBorder(.white.opacity(0.14), lineWidth: 1))
     .shadow(color: LabColor.shadow.opacity(0.45), radius: 20, y: 10)
     .accessibilityElement(children: .contain)
     .accessibilityAddTraits(.isModal)
-  }
-}
-
-struct MathRow: Identifiable {
-  var angle: Double
-  var value: String
-  var spokenValue: String
-
-  var id: Double { angle }
-}
-
-extension MathPanel {
-  /// 5.5: Lumis = 360° ÷ angle.
-  static func mirror(liveAngle: Double, done: @escaping () -> Void) -> MathPanel {
-    MathPanel(
-      formula: "Lumis = 360° ÷ angle",
-      explanation: "A circle is 360°. Each slice is as wide as the mirror angle, and each slice holds one Lumi. That count includes the real Lumi, so reflections = 360° ÷ angle − 1.",
-      columns: ("Angle", "Lumis"),
-      rows: [(180, 2), (120, 3), (90, 4), (72, 5), (60, 6), (45, 8)].map {
-        MathRow(angle: $0.0, value: "\($0.1)", spokenValue: "\($0.1) Lumis")
-      },
-      liveAngle: liveAngle,
-      done: done
-    )
-  }
-
-  /// 5.8: speed at the bottom = √(10/7 × g × height), for a 10 cm drop.
-  static func marbleRamp(liveAngle: Double, done: @escaping () -> Void) -> MathPanel {
-    MathPanel(
-      formula: "speed at the bottom = √(10/7 × g × height)",
-      explanation: "Height turns into speed. The angle isn’t in the formula, so from the same height every smooth ramp gives the same speed. Steeper just gets there sooner.",
-      columns: ("Ramp (10 cm drop)", "Time down · speed at the bottom"),
-      rows: [(15, "0.65"), (20, "0.49"), (30, "0.34"), (40, "0.26"), (45, "0.24"), (50, "0.22")].map {
-        MathRow(angle: $0.0, value: "\($0.1) s · 1.2 m/s", spokenValue: "\($0.1) seconds down, 1.2 meters per second at the bottom")
-      },
-      liveAngle: liveAngle,
-      done: done
-    )
   }
 }

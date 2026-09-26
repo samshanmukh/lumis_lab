@@ -45,8 +45,10 @@ final class HingeModel {
       source = .dial
       return
     }
+    // Handing over from the dial eases the scene to the hinge over 0.3 s: never a jump.
+    let handOff = source == .dial
     source = .hinge
-    withAnimation(LabMotion.hinge) {
+    withAnimation(handOff ? .easeInOut(duration: 0.3) : LabMotion.hinge) {
       angle = min(180, max(0, hinge.angle.degrees))
     }
   }

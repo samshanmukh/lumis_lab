@@ -9,18 +9,10 @@ final class AppModel {
     progress = Self.load() ?? LabProgress()
   }
 
-  var mirror: RoomState { state(.mirror) }
+  var mirror: RoomState { room(.mirror) }
 
-  func state(_ room: RoomID) -> RoomState { progress.rooms[room] ?? RoomState() }
+  func room(_ id: RoomID) -> RoomState { progress.rooms[id] ?? RoomState() }
 
-  var fireflies: [RoomID: Set<Firefly>] { progress.rooms.mapValues(\.fireflies) }
-  var solvedRooms: Set<RoomID> { Set(progress.rooms.filter { $0.value.solved }.keys) }
-
-  /// A built room can be started once every built room before it is done.
-  func isStartable(_ room: RoomID) -> Bool {
-    guard room.isBuilt else { return false }
-    return RoomID.allCases.prefix { $0 != room }.allSatisfy { !$0.isBuilt || state($0).solved }
-  }
   var earnedFireflies: Int { progress.rooms.values.reduce(0) { $0 + $1.fireflies.count } }
 
   func markWelcomeSeen() {

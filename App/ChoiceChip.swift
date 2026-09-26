@@ -38,19 +38,7 @@ struct ChoiceChip: View {
     }
     .buttonStyle(ChipPressStyle())
     .disabled(isLocked)
-    .keyframeAnimator(initialValue: CGFloat.zero, trigger: shakes) { content, offset in
-      content.offset(x: offset)
-    } keyframes: { _ in
-      KeyframeTrack {
-        LinearKeyframe(6, duration: 0.05)
-        LinearKeyframe(-6, duration: 0.05)
-        LinearKeyframe(4, duration: 0.05)
-        LinearKeyframe(-4, duration: 0.05)
-        LinearKeyframe(2, duration: 0.05)
-        LinearKeyframe(-2, duration: 0.05)
-        LinearKeyframe(0, duration: 0.06)
-      }
-    }
+    .labShake(trigger: shakes)
     .onChange(of: mark) { _, newMark in
       if newMark == .wrong, !reduceMotion { shakes += 1 }
     }

@@ -50,8 +50,7 @@ struct MarbleRampView: View {
         if room.step == .roomEnd {
           RoomEndView(
             finished: MarbleRampModel.room,
-            fireflies: room.app.fireflies,
-            solved: room.app.solvedRooms,
+            app: room.app,
             split: FoldSplit(size: layout.size, insets: insets, foldX: layout.foldX ?? layout.size.width / 2, gap: 40, tallFirstShare: 0.55),
             leave: leave
           )
@@ -83,14 +82,7 @@ struct MarbleRampView: View {
       chrome(layout: layout, insets: insets)
 
       if room.step.isCheckpoint {
-        CheckpointBoard(
-          question: room.checkpointQuestion,
-          state: room.checkpoint,
-          feedback: room.checkpointFeedback,
-          answer: { room.answer($0) },
-          forward: { room.checkpointForward() },
-          seeIt: { room.seeIt() }
-        )
+        CheckpointBoard(room: room) { room.seeIt() }
         .place(in: layout.board)
         .transition(reduceMotion ? .opacity : .move(edge: layout.isTall ? .bottom : .trailing).combined(with: .opacity))
       } else {
@@ -100,7 +92,7 @@ struct MarbleRampView: View {
       }
 
       if room.showingMath {
-        MathPanel.marbleRamp(liveAngle: room.rampAngle) { showMath(false) }
+        MathPanel(sheet: .marbleRamp, liveValue: room.rampAngle) { showMath(false) }
           .place(in: layout.sheet)
           .transition(reduceMotion ? .opacity : .move(edge: layout.isTall ? .bottom : .trailing).combined(with: .opacity))
       }
