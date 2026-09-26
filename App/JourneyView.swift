@@ -20,9 +20,9 @@ struct JourneyView: View {
     case plus
   }
 
-  /// Bottom to top in journey order; a locked stop says which room it follows.
+  /// Top to bottom in journey order; a locked stop says which room it follows.
   private var stops: [(room: RoomID, subtitle: String)] {
-    RoomID.allCases.reversed().map { room in
+    RoomID.allCases.map { room in
       (room, room.previous.map { "After the \($0.shortTitle)" } ?? room.question)
     }
   }
@@ -46,8 +46,8 @@ struct JourneyView: View {
           ForEach(stops, id: \.room) { stop in
             stopView(stop.room, subtitle: stop.subtitle)
               .id(stop.room)
-            if let below = stop.room.previous {
-              dottedTrail(active: model.room(below).solved)
+            if stop.room.next != nil {
+              dottedTrail(active: model.room(stop.room).solved)
                 .padding(.leading, 53)
             }
           }
@@ -58,7 +58,6 @@ struct JourneyView: View {
         .padding(.top, 40)
         .padding(.bottom, 40)
       }
-      .defaultScrollAnchor(.bottom)
       .onAppear {
         // Start where the journey is: the room to play next.
         if let focus = RoomID.allCases.first(where: { state(for: $0) == .current }), focus != .mirror {
