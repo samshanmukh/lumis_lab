@@ -32,6 +32,8 @@ The tone is curious rather than punitive. A wrong answer points the learner back
 
 Open **The Glass Pond** from the app home screen on iPhone Duo. The room includes the predict → experiment → check → understand → apply loop from the Figma design. At 25° the ray escapes the glass; around 41.8° it skims the surface; at 50° it reflects inside. In the final challenge, hold the ray past the critical angle to wake the moon lily. A dial and a guided sweep keep the experiment playable without hinge input, while a partially open iPhone Duo hinge can control the same model. The journal records completion on the device.
 
+The room opens through the Figma door artwork. Its hinge-driven doors, ambient light, step changes, answer feedback, and tipping-point flare use native SwiftUI motion with a Reduce Motion fallback.
+
 ## Original hackathon MVP target
 
 The original hackathon plan centered on one polished Mirror Room. That room is still planned. Its target path is:

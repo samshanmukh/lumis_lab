@@ -2,6 +2,10 @@ import SwiftUI
 
 struct PondSceneView: View {
   var session: GlassPondSession
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var flareVisible = false
+  @State private var firefliesDrifting = false
+  @State private var flareTask: Task<Void, Never>?
 
   var body: some View {
     Canvas { context, size in
@@ -21,8 +25,27 @@ struct PondSceneView: View {
           .padding(.top, 18)
       }
     }
+    .overlay { thresholdFlare }
+    .overlay { ambientFireflies }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .clipped()
+    .onChange(of: session.thresholdCrossings) { _, _ in
+      flareTask?.cancel()
+      flareVisible = true
+      flareTask = Task { @MainActor in
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        guard !Task.isCancelled else { return }
+        flareVisible = false
+      }
+    }
+    .task(id: reduceMotion) {
+      firefliesDrifting = false
+      guard !reduceMotion else { return }
+      withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
+        firefliesDrifting = true
+      }
+    }
+    .onDisappear { flareTask?.cancel() }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("Glass Pond scene")
     .accessibilityValue(
@@ -33,6 +56,45 @@ struct PondSceneView: View {
           : session.snapshot.accessibilityDescription
     )
     .accessibilityAddTraits(.updatesFrequently)
+  }
+
+  private var thresholdFlare: some View {
+    GeometryReader { geometry in
+      let size = geometry.size
+      let x: CGFloat = session.showsVine
+        ? size.width * 0.5
+        : min(size.width * 0.24 + size.height * 0.27 * tan(session.sceneAngle * .pi / 180), size.width * 0.94)
+      let y = size.height * (session.showsVine ? 0.45 : 0.57)
+
+      Circle()
+        .fill(PondPalette.moon.opacity(flareVisible ? 0.8 : 0))
+        .frame(width: 36, height: 36)
+        .blur(radius: 12)
+        .scaleEffect(reduceMotion ? 1 : flareVisible ? 1.35 : 0.4)
+        .position(x: x, y: y)
+        .animation(.easeOut(duration: reduceMotion ? 0.2 : 0.25), value: flareVisible)
+    }
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
+  }
+
+  private var ambientFireflies: some View {
+    GeometryReader { geometry in
+      ForEach(0..<5) { index in
+        let positions: [(CGFloat, CGFloat)] = [(0.10, 0.48), (0.21, 0.41), (0.41, 0.44), (0.67, 0.49), (0.91, 0.45)]
+        Circle()
+          .fill(PondPalette.light)
+          .frame(width: 4, height: 4)
+          .shadow(color: PondPalette.light, radius: 7)
+          .opacity(firefliesDrifting ? 0.95 : 0.55)
+          .offset(x: firefliesDrifting ? CGFloat(index.isMultiple(of: 2) ? 10 : -8) : 0,
+                  y: firefliesDrifting ? CGFloat(index.isMultiple(of: 2) ? -12 : 9) : 0)
+          .position(x: positions[index].0 * geometry.size.width,
+                    y: positions[index].1 * geometry.size.height)
+      }
+    }
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
   }
 
   private var vineAccessibilityValue: String {

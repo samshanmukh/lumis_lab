@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GlassPondView: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var session = GlassPondSession()
   @State private var showsHint = false
   @State private var showsJournal = false
@@ -12,11 +13,13 @@ struct GlassPondView: View {
       .navigationBarBackButtonHidden()
       .toolbarBackground(.hidden, for: .navigationBar)
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          Button("Map", systemImage: "map") { dismiss() }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Restart room", systemImage: "arrow.counterclockwise") { session.reset() }
+        if session.stage != .entrance {
+          ToolbarItem(placement: .topBarLeading) {
+            Button("Map", systemImage: "map") { dismiss() }
+          }
+          ToolbarItem(placement: .topBarTrailing) {
+            Button("Restart room", systemImage: "arrow.counterclockwise") { session.reset() }
+          }
         }
         if session.stage != .entrance && session.stage != .prediction {
           ToolbarItemGroup(placement: .bottomBar) {
@@ -45,27 +48,47 @@ struct GlassPondView: View {
   @ViewBuilder
   private var roomLayout: some View {
     if #available(iOS 27.1, *) {
-      ArrangementView {
-        PondControlPanel(session: session)
-      } secondary: {
-        PondSceneView(session: session)
+      ZStack {
+        if session.stage == .entrance {
+          PondDoorView(session: session)
+            .transition(.opacity)
+        } else if session.hingeAvailable {
+          ArrangementView {
+            PondControlPanel(session: session)
+          } secondary: {
+            PondSceneView(session: session)
+          }
+          .arrangementViewStyle(.split)
+          .transition(.opacity)
+        } else {
+          standardRoomLayout
+          .transition(.opacity)
+        }
       }
-      .arrangementViewStyle(.split)
+      .animation(.easeOut(duration: reduceMotion ? 0.2 : 0.4), value: session.stage == .entrance)
       .onHingeChange { _, context in
         session.receiveHinge(context)
       }
     } else {
-      GeometryReader { geometry in
-        if geometry.size.width > geometry.size.height {
-          HStack(spacing: 0) {
-            PondSceneView(session: session)
-            PondControlPanel(session: session)
-          }
-        } else {
-          VStack(spacing: 0) {
-            PondSceneView(session: session)
-            PondControlPanel(session: session)
-          }
+      if session.stage == .entrance {
+        PondDoorView(session: session)
+      } else {
+        standardRoomLayout
+      }
+    }
+  }
+
+  private var standardRoomLayout: some View {
+    GeometryReader { geometry in
+      if geometry.size.width > geometry.size.height {
+        HStack(spacing: 0) {
+          PondSceneView(session: session)
+          PondControlPanel(session: session)
+        }
+      } else {
+        VStack(spacing: 0) {
+          PondSceneView(session: session)
+          PondControlPanel(session: session)
         }
       }
     }
