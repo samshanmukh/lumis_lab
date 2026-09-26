@@ -49,6 +49,7 @@ struct JourneyView: View {
       .padding(.top, 40)
       .padding(.bottom, 40)
     }
+    .defaultScrollAnchor(.bottom)
     .background(LabBackdrop())
     .task { await lightFireflies() }
   }
@@ -91,20 +92,21 @@ struct JourneyView: View {
               .foregroundStyle(LabColor.secondaryInk)
               .fixedSize(horizontal: false, vertical: true)
           }
-          Text(startable ? "Start" : "Coming soon")
-            .font(LabFont.label)
-            .fixedSize()
-            .foregroundStyle(startable ? LabColor.buttonInk : LabColor.secondaryInk)
-            .padding(.horizontal, 28)
-            .frame(height: 52)
-            .background {
-              if startable {
-                Capsule().fill(LabColor.primaryButton)
-              } else {
-                Capsule().fill(.white.opacity(0.08)).overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
-              }
+          Group {
+            if startable {
+              startPill
+            } else {
+              Text("Coming soon")
+                .font(LabFont.label)
+                .fixedSize()
+                .foregroundStyle(LabColor.secondaryInk)
+                .padding(.horizontal, 28)
+                .frame(height: 52)
+                .background(.white.opacity(0.08), in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
             }
-            .padding(.top, 10)
+          }
+          .padding(.top, 10)
         }
         Spacer(minLength: 0)
       }
@@ -130,6 +132,8 @@ struct JourneyView: View {
             .font(LabFont.label)
             .foregroundStyle(LabColor.primaryInk)
           FireflyRow(earned: earned, size: 24, lightCount: litFireflies)
+          startPill
+            .padding(.top, 4)
         }
         Spacer(minLength: 0)
       }
@@ -138,7 +142,7 @@ struct JourneyView: View {
     }
     .buttonStyle(.plain)
     .accessibilityLabel("\(room.title), done, \(earned.count) of 3 fireflies")
-    .accessibilityHint("Plays the room again from its door")
+    .accessibilityHint("Starts the room again from its door")
   }
 
   private func lockedStop(_ room: RoomID, subtitle: String) -> some View {
@@ -169,6 +173,17 @@ struct JourneyView: View {
     .buttonStyle(.plain)
     .accessibilityLabel("\(room.title), \(subtitle)")
     .accessibilityHint("Coming later")
+  }
+
+  private var startPill: some View {
+    Text("Start")
+      .font(LabFont.label)
+      .fixedSize()
+      .foregroundStyle(LabColor.buttonInk)
+      .padding(.horizontal, 28)
+      .frame(height: 52)
+      .background(LabColor.primaryButton, in: Capsule())
+      .shadow(color: LabColor.shadow.opacity(0.35), radius: 8, y: 4)
   }
 
   private func nudge(_ room: RoomID) {

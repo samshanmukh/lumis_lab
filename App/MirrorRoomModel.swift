@@ -30,6 +30,15 @@ final class MirrorRoomModel {
 
   private(set) var challengeCount = 0
 
+  private(set) var hint: HintState?
+  private(set) var demoAngle: Double?
+  private var hintLevels: [RoomStep: Int] = [:]
+  private var demoTask: Task<Void, Never>?
+  private var yourTurnTask: Task<Void, Never>?
+  private var autoHintTask: Task<Void, Never>?
+  private var autoHintShown = false
+  private var demoRestoreAngle: Double?
+
   private(set) var successTick = 0
   private(set) var softTick = 0
   private(set) var selectionTick = 0
@@ -55,7 +64,7 @@ final class MirrorRoomModel {
     switch step {
     case .check, .why: Self.tryItGoal
     case .solved: Self.challengeGoal
-    default: goalOverride ?? hinge.mirrorAngle
+    default: demoAngle ?? goalOverride ?? hinge.mirrorAngle
     }
   }
 
@@ -131,6 +140,12 @@ final class MirrorRoomModel {
   // MARK: Try it
 
   func showMeGoal() {
+    closeHint()
+    turnToGoal()
+  }
+
+  /// Turns the mirrors to 90° without the hinge; counts as reaching 90°.
+  private func turnToGoal() {
     if hinge.usesDial {
       hinge.setDialAngle(Self.tryItGoal, animation: .easeInOut(duration: 0.8))
     } else {
@@ -251,6 +266,7 @@ final class MirrorRoomModel {
 
   /// Call on every hinge or dial update and after each step change.
   func angleChanged() {
+    guard !isDemoPlaying else { return }
     let live = hinge.mirrorAngle
     if goalOverride != nil, abs(live - overrideAnchor) > 3 {
       withAnimation(LabMotion.hinge) { goalOverride = nil }
@@ -293,6 +309,7 @@ final class MirrorRoomModel {
     if count != challengeCount {
       challengeCount = count
       announce(challengeStatus)
+      scheduleAutoHint()
     }
     let inZone = abs(angle - Self.challengeGoal) <= MirrorOptics.tolerance
     guard inZone != inWinZone else { return }
@@ -319,8 +336,12 @@ final class MirrorRoomModel {
   func go(to next: RoomStep) {
     holdTask?.cancel()
     moodTask?.cancel()
+    demoTask?.cancel()
+    yourTurnTask?.cancel()
     withAnimation(LabMotion.step) {
       step = next
+      hint = nil
+      demoAngle = nil
       heldAtGoal = false
       goalOverride = nil
       worried = false
@@ -347,6 +368,189 @@ final class MirrorRoomModel {
       app.setStep(next)
     }
     angleChanged()
+    scheduleAutoHint()
+  }
+
+  // MARK: Hints
+
+  var hintContent: HintContent? { Self.hintContent(for: step) }
+  var isDemoPlaying: Bool { hint?.phase == .showing }
+
+  /// The Hint toolbar item: opens at the last level seen on this step, or closes.
+  func toggleHint() {
+    if hint != nil {
+      closeHint()
+    } else {
+      openHint()
+    }
+  }
+
+  func openHint() {
+    guard let content = hintContent else { return }
+    let level = min(hintLevels[step] ?? 1, content.levels.count)
+    hintLevels[step] = level
+    showingMath = false
+    withAnimation(LabMotion.panel) { hint = HintState(level: level) }
+    announce("Hint. \(content.levels[level - 1])")
+  }
+
+  func anotherHint() {
+    guard var current = hint, let content = hintContent, current.level < content.levels.count else { return }
+    current.level += 1
+    hintLevels[step] = current.level
+    withAnimation(.spring(duration: 0.35, bounce: 0.1)) { hint = current }
+    announce(content.levels[current.level - 1])
+    if step == .check, current.level == 2 {
+      demoTask?.cancel()
+      demoTask = Task { @MainActor [weak self] in
+        await self?.pulseLumis(every: .milliseconds(400))
+      }
+    }
+  }
+
+  func closeHint() {
+    guard hint != nil else { return }
+    if isDemoPlaying { handBack() }
+    demoTask?.cancel()
+    yourTurnTask?.cancel()
+    withAnimation(.easeIn(duration: 0.2)) { hint = nil }
+  }
+
+  /// Level 3: Lumi shows the move once, then hands control back.
+  func showMe() {
+    guard hint != nil, !isDemoPlaying else { return }
+    demoTask?.cancel()
+    holdTask?.cancel()
+    withAnimation(.spring(duration: 0.3, bounce: 0.1)) { hint?.phase = .showing }
+    demoTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      await self.playDemo()
+      guard !Task.isCancelled else { return }
+      self.demoFinished()
+    }
+  }
+
+  /// Stop ends the demo early and hands back the student’s own angle.
+  func stopDemo() {
+    guard isDemoPlaying else { return }
+    demoTask?.cancel()
+    handBack()
+    showYourTurn()
+  }
+
+  private func playDemo() async {
+    let start = ContinuousClock.now
+    switch step {
+    case .tryIt:
+      announce("Showing you. Turning the mirrors to 90 degrees.")
+      demoRestoreAngle = hinge.mirrorAngle
+      turnToGoal()
+    case .check:
+      announce("Showing you. Watch each Lumi light up.")
+      try? await Task.sleep(for: .milliseconds(300))
+      await pulseLumis(every: .milliseconds(800))
+    case .challenge:
+      announce("Showing you. Folding to 60 degrees.")
+      demoAngle = hinge.mirrorAngle
+      withAnimation(.easeInOut(duration: 1.4)) { demoAngle = Self.challengeGoal }
+      try? await Task.sleep(for: .milliseconds(2800))
+      guard !Task.isCancelled else { return }
+      withAnimation(.easeInOut(duration: 1.2)) { demoAngle = hinge.mirrorAngle }
+      try? await Task.sleep(for: .milliseconds(1200))
+      guard !Task.isCancelled else { return }
+      demoAngle = nil
+    default:
+      break
+    }
+    try? await Task.sleep(until: start + .seconds(4), clock: .continuous)
+  }
+
+  private func demoFinished() {
+    if step == .tryIt {
+      // Show me counts as reaching 90°: the mirrors stay there until the student moves them.
+      overrideAnchor = hinge.mirrorAngle
+      inGoalZone = true
+      if !heldAtGoal { withAnimation(LabMotion.step) { heldAtGoal = true } }
+    }
+    showYourTurn()
+  }
+
+  private func handBack() {
+    withAnimation(LabMotion.hinge) { pulsingLumi = nil }
+    switch step {
+    case .tryIt:
+      holdTask?.cancel()
+      withAnimation(.easeInOut(duration: 0.3)) {
+        goalOverride = nil
+        heldAtGoal = false
+      }
+      if let restore = demoRestoreAngle, hinge.usesDial {
+        hinge.setDialAngle(restore, animation: .easeInOut(duration: 0.3))
+      }
+      inGoalZone = false
+    case .challenge:
+      withAnimation(.easeInOut(duration: 0.3)) { demoAngle = hinge.mirrorAngle }
+      Task { @MainActor [weak self] in
+        try? await Task.sleep(for: .milliseconds(300))
+        self?.demoAngle = nil
+      }
+    default:
+      break
+    }
+    demoRestoreAngle = nil
+  }
+
+  private func showYourTurn() {
+    withAnimation(.spring(duration: 0.3, bounce: 0.1)) { hint?.phase = .yourTurn }
+    announce("Your turn.")
+    angleChanged()
+    yourTurnTask?.cancel()
+    yourTurnTask = Task { @MainActor [weak self] in
+      try? await Task.sleep(for: .seconds(2))
+      guard let self, !Task.isCancelled, self.hint?.phase == .yourTurn else { return }
+      withAnimation(.easeIn(duration: 0.2)) { self.hint = nil }
+    }
+  }
+
+  /// Once per room, the hint opens by itself after 45 s without progress on the challenge.
+  private func scheduleAutoHint() {
+    autoHintTask?.cancel()
+    guard step == .challenge, !autoHintShown else { return }
+    autoHintTask = Task { @MainActor [weak self] in
+      try? await Task.sleep(for: .seconds(45))
+      guard let self, !Task.isCancelled, self.step == .challenge, self.hint == nil else { return }
+      self.autoHintShown = true
+      self.openHint()
+    }
+  }
+
+  static func hintContent(for step: RoomStep) -> HintContent? {
+    switch step {
+    case .tryIt:
+      HintContent(levels: [
+        "Close your phone like a book.",
+        "Stop when the glowing mirrors sit on the gold dashes.",
+        "Lumi can turn the mirrors to 90° for you. Then the phone is yours again."
+      ], showMeTitle: "Show me 90°")
+    case .check:
+      HintContent(levels: [
+        "Count every Lumi, the real one too.",
+        "Watch each Lumi light up in turn and count along.",
+        "Lumi can light up each Lumi, starting with the real one. Count along!"
+      ], showMeTitle: "Show me")
+    case .challenge:
+      HintContent(levels: [
+        "Fold more for more Lumis, open for fewer.",
+        "360 ÷ 6 gives the angle.",
+        "Watch Lumi do it once. Then the phone is yours again, at the angle you had."
+      ], showMeTitle: "Show me")
+    case .why:
+      HintContent(levels: ["Read the words, then find them in the picture."], showMeTitle: nil)
+    case .solved:
+      HintContent(levels: ["You made 6 Lumis! Tap Next when you’re ready."], showMeTitle: nil)
+    default:
+      nil
+    }
   }
 
   func announce(_ text: String) {
@@ -386,4 +590,21 @@ enum CountOutcome {
   case right
   case wrong
   case revealed
+}
+
+struct HintState: Equatable {
+  var level: Int
+  var phase: HintPhase = .panel
+}
+
+enum HintPhase {
+  case panel
+  case showing
+  case yourTurn
+}
+
+struct HintContent {
+  var levels: [String]
+  /// The level 3 action, when the step has a Show me.
+  var showMeTitle: String?
 }

@@ -31,7 +31,7 @@ struct LabRootView: View {
           JourneyView(model: model, lightNewFireflies: returningFromRoom, start: openMirror)
             .toolbar(.hidden, for: .navigationBar)
         case .door:
-          DoorView(hinge: hinge, goToMap: showMap, enterRoom: enterMirror)
+          DoorView(hinge: hinge, showsHint: !model.mirror.solved, goToMap: showMap, enterRoom: enterMirror)
             .toolbar(.hidden, for: .navigationBar)
         case .mirror:
           if let mirrorRoom {

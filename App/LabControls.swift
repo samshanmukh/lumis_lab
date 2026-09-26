@@ -51,6 +51,27 @@ struct QuietLabButton: View {
   }
 }
 
+/// A secondary action that isn’t the step’s forward move, on a glass capsule.
+struct GlassLabButton: View {
+  var title: String
+  var action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(LabFont.label)
+        .foregroundStyle(LabColor.primaryInk)
+        .fixedSize()
+        .padding(.horizontal, 28)
+        .frame(minHeight: 56)
+        .background(.white.opacity(0.09), in: Capsule())
+        .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
+        .contentShape(Capsule())
+    }
+    .buttonStyle(PrimaryLabButtonStyle())
+  }
+}
+
 struct MapCapsule: View {
   var action: () -> Void
 

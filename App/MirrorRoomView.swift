@@ -25,6 +25,13 @@ struct MirrorRoomView: View {
         ToolbarItem(placement: .cancellationAction) {
           Button("Map", systemImage: "chevron.left", action: map)
         }
+        if room.hintContent != nil {
+          ToolbarItem(placement: .primaryAction) {
+            Button("Hint", systemImage: room.hint == nil ? "lightbulb" : "lightbulb.fill") {
+              room.toggleHint()
+            }
+          }
+        }
       }
     }
     .toolbar(showsToolbar ? .visible : .hidden, for: .navigationBar)
@@ -132,6 +139,10 @@ struct MirrorRoomView: View {
       if room.showingMath {
         mathPanel(size: size, insets: insets, foldX: foldX, wide: wide)
       }
+
+      if let hint = room.hint, let content = room.hintContent {
+        hintPanel(hint, content: content, size: size, insets: insets, foldX: foldX, wide: wide)
+      }
     }
   }
 
@@ -156,6 +167,8 @@ struct MirrorRoomView: View {
 
       if showsDial {
         AngleDial(hinge: room.hinge)
+          .disabled(room.isDemoPlaying)
+          .opacity(room.isDemoPlaying ? 0.45 : 1)
           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
           .padding(.trailing, insets.trailing + 40)
           .padding(.bottom, insets.bottom + 40)
@@ -181,6 +194,8 @@ struct MirrorRoomView: View {
       if showsDial {
         VStack(spacing: 8) {
           AngleDial(hinge: room.hinge)
+            .disabled(room.isDemoPlaying)
+            .opacity(room.isDemoPlaying ? 0.45 : 1)
           Text("Drag to fold")
             .font(LabFont.caption)
             .foregroundStyle(LabColor.secondaryInk)
@@ -218,8 +233,32 @@ struct MirrorRoomView: View {
   }
 
   private func showMath(_ show: Bool) {
+    if show { room.closeHint() }
     let animation: Animation = reduceMotion ? LabMotion.reduced : (show ? LabMotion.panel : .easeIn(duration: 0.2))
     withAnimation(animation) { room.showingMath = show }
+  }
+
+  /// The hint sits on the trailing half under the readout when the phone is open like a book,
+  /// and across the top on a narrow screen, so the scene and the dial stay usable.
+  private func hintPanel(_ hint: HintState, content: HintContent, size: CGSize, insets: EdgeInsets, foldX: CGFloat, wide: Bool) -> some View {
+    let frame: CGRect
+    if wide {
+      let minX = foldX + 24
+      frame = CGRect(x: minX, y: insets.top + 168, width: min(440, size.width - insets.trailing - 16 - minX), height: size.height * 0.5)
+    } else {
+      frame = CGRect(x: insets.leading + 12, y: insets.top + 12, width: size.width - insets.leading - insets.trailing - 24, height: size.height * 0.5)
+    }
+    return HintPanel(
+      content: content,
+      state: hint,
+      gotIt: { room.closeHint() },
+      anotherHint: { room.anotherHint() },
+      showMe: { room.showMe() },
+      stop: { room.stopDemo() }
+    )
+    .frame(width: frame.width, height: frame.height, alignment: .top)
+    .offset(x: frame.minX, y: frame.minY)
+    .transition(reduceMotion ? .opacity : .move(edge: wide ? .trailing : .top).combined(with: .opacity))
   }
 
   private var beatSwipe: some Gesture {
