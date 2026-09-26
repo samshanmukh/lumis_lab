@@ -56,6 +56,9 @@ struct DoorView: View {
       let doorHeight = min(size.height * 0.57, 520)
       let doorWidth = min(size.width * 0.6, doorHeight * 0.727)
       let doorY = floorTop - doorHeight / 2
+      // The words sit between the Map capsule and the top of the door, and shrink rather than spill.
+      let titleTop = insets.top + 64
+      let titleSpace = CGRect(x: 0, y: titleTop, width: size.width, height: max(60, floorTop - doorHeight - 16 - titleTop))
 
       ZStack(alignment: .topLeading) {
         wallBackground(size: size, floorTop: floorTop, centerX: centerX, doorWidth: doorWidth)
@@ -67,14 +70,16 @@ struct DoorView: View {
           Text("The Mirror Room")
             .font(LabFont.display)
             .foregroundStyle(LabColor.primaryInk)
+            .lineLimit(1)
           Text("Lumi is alone in the dark. Can mirrors make friends for her?")
             .font(LabFont.body)
             .foregroundStyle(LabColor.secondaryInk)
             .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
+            .lineLimit(3)
         }
-        .frame(maxWidth: min(size.width - insets.leading - insets.trailing - 80, 580))
-        .position(x: centerX, y: max(insets.top + 70, (floorTop - doorHeight) * 0.5))
+        .minimumScaleFactor(0.6)
+        .frame(maxWidth: min(size.width - insets.leading - insets.trailing - 80, 580), maxHeight: titleSpace.height)
+        .position(x: centerX, y: titleSpace.midY)
 
         HStack {
           sconce
@@ -102,6 +107,9 @@ struct DoorView: View {
           Text(phoneIsClosed ? "Open your phone to go in" : "Tap the door to go in")
             .font(LabFont.caption)
             .foregroundStyle(LabColor.secondaryInk)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: size.width - insets.leading - insets.trailing - 48, maxHeight: (size.height - floorTop) * 0.7)
             .contentTransition(.opacity)
             .animation(.easeInOut(duration: 0.2), value: phoneIsClosed)
             .position(x: centerX, y: floorTop + (size.height - floorTop) * 0.45)

@@ -120,7 +120,7 @@ struct CheckpointBoard: View {
         PrimaryLabButton(title: isFirst ? "Next" : "Next: The Glass Pond", fillsWidth: false) {
           room.checkpointForward()
         }
-        QuietLabButton(title: "See it anyway", action: seeIt)
+        QuietLabButton(title: "Replay", action: seeIt)
       } else {
         PrimaryLabButton(title: "See it", fillsWidth: false, action: seeIt)
         QuietLabButton(title: "Skip") { room.checkpointForward() }
