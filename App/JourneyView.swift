@@ -4,7 +4,9 @@ struct JourneyView: View {
   var model: AppModel
   var lightNewFireflies = false
   var start: () -> Void
+  var openPond: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var showingParentArea = false
   @State private var nudgedRoom: RoomID?
   @State private var litFireflies = 3
 
@@ -51,6 +53,21 @@ struct JourneyView: View {
     }
     .defaultScrollAnchor(.bottom)
     .background(LabBackdrop())
+    .overlay(alignment: .topTrailing) {
+      Button("Parent area", systemImage: "person.crop.circle") {
+        showingParentArea = true
+      }
+      .labelStyle(.iconOnly)
+      .font(.title2)
+      .foregroundStyle(LabColor.secondaryInk)
+      .frame(minWidth: 44, minHeight: 44)
+      .contentShape(Rectangle())
+      .padding(.top, 8)
+      .padding(.trailing, 16)
+    }
+    .sheet(isPresented: $showingParentArea) {
+      ParentAccessView()
+    }
     .task { await lightFireflies() }
   }
 
@@ -68,7 +85,7 @@ struct JourneyView: View {
     case .done:
       doneStop(room)
     case .current:
-      currentStop(room, subtitle: subtitle, startable: room == .mirror)
+      currentStop(room, subtitle: room == .glassPond ? "Tilt Lumi’s light and wake the moon lily." : subtitle, startable: room == .mirror || room == .glassPond)
     case .locked:
       lockedStop(room, subtitle: subtitle)
     }
@@ -76,7 +93,13 @@ struct JourneyView: View {
 
   private func currentStop(_ room: RoomID, subtitle: String, startable: Bool) -> some View {
     Button {
-      if startable { start() } else { nudge(room) }
+      if !startable {
+        nudge(room)
+      } else if room == .glassPond {
+        openPond()
+      } else {
+        start()
+      }
     } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 116)

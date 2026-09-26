@@ -14,12 +14,20 @@
   "settings": {
     "CODE_SIGN_IDENTITY": "-"
   },
+  "packages": {
+    "RevenueCat": {
+      "url": "https://github.com/RevenueCat/purchases-ios-spm.git",
+      "from": "5.83.0"
+    }
+  },
   "targets": {
     "Lumis Lab": {
       "type": "application",
       "platform": "iOS",
       "sources": [
-        { "path": "App" }
+        {
+          "path": "App"
+        }
       ],
       "info": {
         "path": "App/Info.plist",
@@ -34,7 +42,8 @@
             "UIInterfaceOrientationPortraitUpsideDown",
             "UIInterfaceOrientationLandscapeLeft",
             "UIInterfaceOrientationLandscapeRight"
-          ]
+          ],
+          "RevenueCatProductionAPIKey": ""
         }
       },
       "settings": {
@@ -46,7 +55,17 @@
         "PRODUCT_NAME": "$(TARGET_NAME)",
         "SWIFT_VERSION": "5.0",
         "TARGETED_DEVICE_FAMILY": "1"
-      }
+      },
+      "dependencies": [
+        {
+          "package": "RevenueCat",
+          "product": "RevenueCat"
+        },
+        {
+          "package": "RevenueCat",
+          "product": "RevenueCatUI"
+        }
+      ]
     }
   }
 }

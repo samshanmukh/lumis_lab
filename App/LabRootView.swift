@@ -16,6 +16,7 @@ struct LabRootView: View {
   @State private var mirrorRoom: MirrorRoomModel?
   @State private var route: LabRoute?
   @State private var returningFromRoom = false
+  @State private var showingPond = false
 
   var body: some View {
     NavigationStack {
@@ -28,8 +29,14 @@ struct LabRootView: View {
           WelcomeView(isOuter: false, action: enterDoor)
             .toolbar(.hidden, for: .navigationBar)
         case .journey:
-          JourneyView(model: model, lightNewFireflies: returningFromRoom, start: openMirror)
-            .toolbar(.hidden, for: .navigationBar)
+          JourneyView(model: model, lightNewFireflies: returningFromRoom, start: openMirror) {
+            returningFromRoom = false
+            showingPond = true
+          }
+          .toolbar(.hidden, for: .navigationBar)
+          .navigationDestination(isPresented: $showingPond) {
+            GlassPondView()
+          }
         case .door:
           DoorView(hinge: hinge, showsHint: !model.mirror.solved, goToMap: showMap, enterRoom: enterMirror)
             .toolbar(.hidden, for: .navigationBar)

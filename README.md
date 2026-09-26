@@ -5,7 +5,7 @@
 Lumi’s Lab is a story-led physics playground for iPhone Duo. Instead of using the fold as a navigation trick, each room turns the physical hinge into part of the experiment: children predict an outcome, fold the device, observe what changes, learn why, and then use the idea to help Lumi.
 
 > [!NOTE]
-> **Repository status:** design and pre-build prototype. This repository currently contains the project brief and design references; a runnable Swift/Xcode target has not yet been committed. The Figma flows below describe approved product intent, not shipped functionality.
+> **Repository status:** runnable SwiftUI app with a playable Glass Pond prototype and a subscription starter. The other physics rooms remain planned work; their Figma flows describe product intent, not shipped functionality. See the [RevenueCat integration guide](docs/RevenueCat-Integration.md) for subscription setup.
 
 ## The experience
 
@@ -24,13 +24,19 @@ The tone is curious rather than punitive. A wrong answer points the learner back
 | Room | The fold controls | Discovery | Design status |
 | --- | --- | --- | --- |
 | [The Mirror Room](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=35-399) | The angle between two simulated mirrors | At ideal symmetric angles, 90° shows four total Lumis and 60° shows six | Hackathon MVP |
-| [The Glass Pond](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=27-25) | A light ray’s angle at a glass-to-air boundary | Near 42°, the ray skims the surface; past it, light is trapped by total internal reflection | Designed next |
+| [The Glass Pond](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=27-25) | A light ray’s angle at a glass-to-air boundary | Near 42°, the ray skims the surface; past it, light is trapped by total internal reflection | Playable prototype |
 | [The Marble Ramp](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=66-1543) | The slope of a virtual ramp | A steeper ramp arrives sooner from the same height; changing the controlled setup changes the energy comparison | Designed |
 | [Launch Angle](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=66-1546) | A virtual launch angle | In the ideal model, 45° travels farthest while complementary angles such as 30° and 60° land together | Designed |
 
-## Hackathon MVP
+## Playable Glass Pond prototype
 
-The smallest complete version is one polished Mirror Room, not four partial experiments. The target path is:
+Open **The Glass Pond** from the app home screen on iPhone Duo. The room includes the predict → experiment → check → understand → apply loop from the Figma design. At 25° the ray escapes the glass; around 41.8° it skims the surface; at 50° it reflects inside. In the final challenge, hold the ray past the critical angle to wake the moon lily. A dial and a guided sweep keep the experiment playable without hinge input, while a partially open iPhone Duo hinge can control the same model. The journal records completion on the device.
+
+The room opens through the Figma door artwork. Its hinge-driven doors, ambient light, step changes, answer feedback, and tipping-point flare use native SwiftUI motion with a Reduce Motion fallback.
+
+## Original hackathon MVP target
+
+The original hackathon plan centered on one polished Mirror Room. That room is still planned. Its target path is:
 
 **Guess at 90° → fold → count four Lumis → see why → find 60° → celebrate six Lumis → earn a firefly**
 
@@ -43,9 +49,9 @@ The MVP is complete when:
 - the same lesson remains completable with a dial when hinge input is unavailable; and
 - the demo can be reset and repeated from a known state.
 
-## Planned implementation
+## Implementation approach
 
-The app is intended to be SwiftUI-first, with one input path shared by the hardware hinge and the fallback dial:
+The Glass Pond is SwiftUI-first, with one physics model shared by the hardware hinge and fallback dial:
 
 ```text
 DeviceHinge / dial
@@ -59,12 +65,11 @@ immutable scene snapshot
 SwiftUI scene + copy + haptics + accessibility
 ```
 
-- `onHingeChange` observes the fold while the device is partially open.
-- `ArrangementView` with a split arrangement places the scene and lesson controls across the two display regions.
-- `reservedRegions(kind: .division)` keeps controls and essential content away from the fold.
-- Pure room-specific calculations keep physics independent from view state and make known-angle tests deterministic.
-- SwiftUI `Canvas` can render mirrors, rays, ramps, trajectories, and trails without a separate physics engine.
-- Closed, fully open, unavailable-hinge, and outer-display states use the same model through a 1° adjustable dial or a guided “Show me” sweep.
+- `onHingeChange` observes the fold while the device is partially open, mapping its angle to a 0–60° light angle.
+- `ArrangementView` with a split arrangement places the scene and lesson controls across the Duo display regions.
+- Pure room-specific calculations keep physics independent from view state and make known-angle checks deterministic.
+- SwiftUI `Canvas` renders the pond, rays, crystal vine, and lily without a separate physics engine.
+- Closed, fully open, and unavailable-hinge states use the same model through an adjustable dial or a guided “Show me” sweep.
 
 ## Product principles
 
@@ -103,7 +108,7 @@ git clone https://github.com/samshanmukh/lumis_lab.git
 cd lumis_lab
 ```
 
-The Xcode project and build instructions will be added with the first runnable implementation. The planned development target is Xcode 27.1 with the iPhone Duo simulator and Device Hub for fold, rotation, resize, and display-state testing.
+The SwiftUI app is defined in `Project.json` and can be built directly in Bitrig. Run it on the iPhone Duo simulator to test The Glass Pond; the remaining rooms in the full journey are planned.
 
 ## License
 
