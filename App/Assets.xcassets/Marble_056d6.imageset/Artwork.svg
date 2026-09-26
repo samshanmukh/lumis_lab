@@ -1,0 +1,38 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="1510.8" height="476.27" viewBox="0 0 1510.8 476.27" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Room floor &#194;&#183; marble">
+<path id="Floor" d="M420.4 0.634934H1089.4V475.635H420.4V0.634934Z" fill="url(#paint0_linear_0_40)"/>
+<path id="Floor &#194;&#183; line" d="M754.9 0.634934L0.399576 475.635" stroke="#D6CFFF" stroke-opacity="0.07" stroke-width="1.5"/>
+<path id="Floor &#194;&#183; line_2" d="M754.9 0.634934L360.4 475.635" stroke="#D6CFFF" stroke-opacity="0.07" stroke-width="1.5"/>
+<path id="Floor &#194;&#183; line_3" d="M754.9 0.634934L754.4 475.635" stroke="#D6CFFF" stroke-opacity="0.07" stroke-width="1.5"/>
+<path id="Floor &#194;&#183; line_4" d="M754.9 0.634934L1148.4 475.635" stroke="#D6CFFF" stroke-opacity="0.07" stroke-width="1.5"/>
+<path id="Floor &#194;&#183; line_5" d="M754.9 0.634934L1510.4 475.635" stroke="#D6CFFF" stroke-opacity="0.07" stroke-width="1.5"/>
+<path id="Floor &#194;&#183; seam" d="M420.4 44.6349H1089.4" stroke="#D6CFFF" stroke-opacity="0.04"/>
+<path id="Floor &#194;&#183; seam_2" d="M420.4 114.635H1089.4" stroke="#D6CFFF" stroke-opacity="0.04"/>
+<path id="Floor &#194;&#183; seam_3" d="M420.4 214.635H1089.4" stroke="#D6CFFF" stroke-opacity="0.04"/>
+<path id="Floor &#194;&#183; seam_4" d="M420.4 354.635H1089.4" stroke="#D6CFFF" stroke-opacity="0.04"/>
+<path id="Floor &#194;&#183; path" d="M720.4 0.634934H789.4L940.4 475.635H570.4L720.4 0.634934Z" fill="url(#paint1_linear_0_40)"/>
+<g id="Floor &#194;&#183; light pool" filter="url(#filter0_f_0_40)">
+<ellipse cx="754.4" cy="234.635" rx="310" ry="110" fill="#FFE066" fill-opacity="0.07"/>
+</g>
+<path id="Floor &#194;&#183; shade under the scene" d="M420.4 0.634934H1089.4V44.6349H420.4V0.634934Z" fill="url(#paint2_linear_0_40)"/>
+</g>
+<defs>
+<filter id="filter0_f_0_40" x="394.4" y="74.6349" width="720" height="320" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="25" result="effect1_foregroundBlur_0_40"/>
+</filter>
+<linearGradient id="paint0_linear_0_40" x1="754.9" y1="0.634934" x2="754.9" y2="475.635" gradientUnits="userSpaceOnUse">
+<stop stop-color="#2A2378"/>
+<stop offset="1" stop-color="#110E46"/>
+</linearGradient>
+<linearGradient id="paint1_linear_0_40" x1="755.4" y1="0.634934" x2="755.4" y2="475.635" gradientUnits="userSpaceOnUse">
+<stop stop-color="#C3B0FF" stop-opacity="0.1"/>
+<stop offset="1" stop-color="#C3B0FF" stop-opacity="0.02"/>
+</linearGradient>
+<linearGradient id="paint2_linear_0_40" x1="754.9" y1="0.634934" x2="754.9" y2="44.6349" gradientUnits="userSpaceOnUse">
+<stop stop-color="#0E0A3A" stop-opacity="0.45"/>
+<stop offset="1" stop-color="#0E0A3A" stop-opacity="0"/>
+</linearGradient>
+</defs>
+</svg>

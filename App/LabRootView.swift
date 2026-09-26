@@ -6,6 +6,7 @@ private enum LabRoute {
   case journey
   case door
   case mirror
+  case marble
 }
 
 struct LabRootView: View {
@@ -28,7 +29,7 @@ struct LabRootView: View {
           WelcomeView(isOuter: false, action: enterDoor)
             .toolbar(.hidden, for: .navigationBar)
         case .journey:
-          JourneyView(model: model, lightNewFireflies: returningFromRoom, start: openMirror)
+          JourneyView(model: model, lightNewFireflies: returningFromRoom, start: openMirror, startMarble: openMarble)
             .toolbar(.hidden, for: .navigationBar)
         case .door:
           DoorView(hinge: hinge, showsHint: !model.mirror.solved, goToMap: showMap, enterRoom: enterMirror)
@@ -37,6 +38,9 @@ struct LabRootView: View {
           if let mirrorRoom {
             MirrorRoomView(room: mirrorRoom, map: showMap, leave: exitRoom)
           }
+        case .marble:
+          MarbleChapterView(onExitToMap: showMap, onCompleted: completeMarble)
+            .toolbar(.hidden, for: .navigationBar)
         case nil:
           Color.clear
             .toolbar(.hidden, for: .navigationBar)
@@ -81,6 +85,20 @@ struct LabRootView: View {
     } else {
       mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
       withAnimation(LabMotion.room) { route = .mirror }
+    }
+  }
+
+  private func openMarble() {
+    returningFromRoom = false
+    model.setStep(.door, room: .marbleRamp)
+    withAnimation(LabMotion.room) { route = .marble }
+  }
+
+  private func completeMarble() {
+    model.updateRoom(.marbleRamp) { state in
+      state.step = .solved
+      state.solved = true
+      state.fireflies.insert(.challenge)
     }
   }
 
