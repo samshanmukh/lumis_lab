@@ -1,6 +1,6 @@
 import Foundation
 
-struct MarbleRampModel {
+struct MarbleChapterModel {
   enum TrialOutcome {
     case short
     case long

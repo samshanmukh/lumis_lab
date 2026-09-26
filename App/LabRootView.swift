@@ -39,7 +39,7 @@ struct LabRootView: View {
             MirrorRoomView(room: mirrorRoom, map: showMap, leave: exitRoom)
           }
         case .marble:
-          ContentView(onExitToMap: showMap, onCompleted: completeMarble)
+          MarbleChapterView(onExitToMap: showMap, onCompleted: completeMarble)
             .toolbar(.hidden, for: .navigationBar)
         case nil:
           Color.clear

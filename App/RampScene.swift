@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RampScene: View {
-  var model: MarbleRampModel
+  var model: MarbleChapterModel
 
   var body: some View {
     TimelineView(.animation(minimumInterval: 1.0 / 60, paused: !model.fireflyAwake)) { timeline in
@@ -183,7 +183,7 @@ private struct RampLayout {
   var start: CGPoint {
     CGPoint(x: end.x - run, y: floorY - run * tan(angle * .pi / 180))
   }
-  var targetX: CGFloat { size.width * MarbleRampModel.targetFraction }
+  var targetX: CGFloat { size.width * MarbleChapterModel.targetFraction }
   var ballRadius: CGFloat {
     min(size.width * 0.027, 10) + min(size.width * 0.035, 13) * CGFloat((mass - 5) / 95)
   }

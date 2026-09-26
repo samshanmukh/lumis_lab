@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct ContentView: View {
+struct MarbleChapterView: View {
   var onExitToMap: (() -> Void)?
   var onCompleted: (() -> Void)?
   @State private var stage: ChapterStage = .door
-  @State private var ramp = MarbleRampModel()
+  @State private var ramp = MarbleChapterModel()
   @State private var quiz = MarbleQuizModel()
   @State private var showObjective = true
   @ScaledMetric(relativeTo: .largeTitle) private var angleSize = 42
@@ -288,7 +288,7 @@ struct ContentView: View {
         .foregroundStyle(.white.opacity(0.76))
       Spacer(minLength: 12)
       chapterButton("Replay Marble Ramp", systemImage: "arrow.counterclockwise") {
-        ramp = MarbleRampModel()
+        ramp = MarbleChapterModel()
         quiz = MarbleQuizModel()
         showObjective = true
         withAnimation(.smooth) { stage = .door }
