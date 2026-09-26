@@ -146,11 +146,13 @@ struct LabRootView: View {
     pondRoom = nil
   }
 
+  /// The chapter only finishes after the roll that wakes the firefly, the guess, and its answer,
+  /// so it earns all three of the room’s fireflies.
   private func completeMarble() {
     model.updateRoom(.marbleRamp) { state in
       state.step = .solved
       state.solved = true
-      state.fireflies.insert(.challenge)
+      state.fireflies.formUnion(Firefly.allCases)
     }
   }
 

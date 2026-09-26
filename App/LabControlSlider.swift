@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// A labelled slider for one of the lab’s settings, with its value in lemon ink.
 struct LabControlSlider: View {
   var title: String
   @Binding var value: Double
@@ -13,20 +14,21 @@ struct LabControlSlider: View {
       HStack(alignment: .firstTextBaseline) {
         Text(title)
           .font(.system(.subheadline, design: .rounded, weight: .semibold))
+          .foregroundStyle(LabColor.primaryInk)
         Spacer()
         Text(valueLabel)
           .font(.system(.subheadline, design: .rounded, weight: .bold))
           .monospacedDigit()
-          .foregroundStyle(Color(red: 1, green: 0.86, blue: 0.63))
+          .foregroundStyle(LabColor.label)
       }
       Slider(value: $value, in: range) {
         Text(title)
       } minimumValueLabel: {
-        Text(minimumLabel).font(.caption2)
+        Text(minimumLabel).font(LabFont.barLabel).foregroundStyle(LabColor.tertiaryInk)
       } maximumValueLabel: {
-        Text(maximumLabel).font(.caption2)
+        Text(maximumLabel).font(LabFont.barLabel).foregroundStyle(LabColor.tertiaryInk)
       }
-      .tint(Color(red: 0.88, green: 0.77, blue: 1))
+      .tint(LabColor.retry)
       .accessibilityValue(valueLabel)
     }
   }

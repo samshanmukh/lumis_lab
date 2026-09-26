@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// The Marble Ramp chapter in Lumi’s Lab: its door, the hinge experiment, a prediction with two
+/// ramps, and what it means. The garden scene sits on one side of the fold, and the words and
+/// controls on the other.
 struct MarbleChapterView: View {
   var onExitToMap: (() -> Void)?
   var onCompleted: (() -> Void)?
@@ -7,7 +10,7 @@ struct MarbleChapterView: View {
   @State private var ramp = MarbleChapterModel()
   @State private var quiz = MarbleQuizModel()
   @State private var showObjective = true
-  @ScaledMetric(relativeTo: .largeTitle) private var angleSize = 42
+  @ScaledMetric(relativeTo: .largeTitle) private var angleSize: CGFloat = 44
 
   var body: some View {
     Group {
@@ -58,7 +61,7 @@ struct MarbleChapterView: View {
         }
       }
     }
-    .background(Color(red: 0.11, green: 0.09, blue: 0.34).ignoresSafeArea())
+    .background(LabColor.backgroundBottom.ignoresSafeArea())
     .preferredColorScheme(.dark)
     .statusBarHidden()
     .sensoryFeedback(.success, trigger: ramp.fireflyAwake)
@@ -87,34 +90,20 @@ struct MarbleChapterView: View {
     }
   }
 
+  // MARK: The scene half
+
   @ViewBuilder
   private var upperPane: some View {
     switch stage {
     case .door:
       EmptyView()
     case .experiment:
-      RampScene(model: ramp)
-      .overlay(alignment: .topTrailing) {
-        VStack(alignment: .trailing, spacing: 3) {
-          Text("MARBLE RAMP")
-            .font(.system(.caption2, design: .rounded, weight: .bold))
-            .tracking(1.7)
-            .foregroundStyle(.white.opacity(0.68))
-          HStack(alignment: .firstTextBaseline, spacing: 7) {
-            Text(ramp.hingeDegrees.map { "\(Int($0.rounded()))°" } ?? "—")
-              .font(.system(size: angleSize, weight: .semibold, design: .rounded))
-              .monospacedDigit()
-              .contentTransition(.numericText())
-            Text("hinge")
-              .font(.system(.caption, design: .rounded))
-              .foregroundStyle(.white.opacity(0.75))
-          }
-          .accessibilityElement(children: .ignore)
-          .accessibilityLabel("Duo hinge angle")
-          .accessibilityValue(ramp.hingeDegrees.map { "\(Int($0.rounded())) degrees" } ?? "Unavailable")
-          .accessibilityHint("Move the Duo hinge to change this angle")
-        }
-        .padding(18)
+      // The garden runs to the screen’s edges; the readout stays in the safe area.
+      ZStack(alignment: .topTrailing) {
+        RampScene(model: ramp)
+          .ignoresSafeArea()
+        hingeReadout
+          .padding(18)
       }
     case .quiz:
       QuizScene(model: quiz) { choice in
@@ -122,37 +111,48 @@ struct MarbleChapterView: View {
       }
     case .next:
       ZStack {
-        LinearGradient(
-          colors: [Color(red: 0.24, green: 0.20, blue: 0.59), Color(red: 0.12, green: 0.10, blue: 0.36)],
-          startPoint: .top,
-          endPoint: .bottom
-        )
-        Image("Marble_a6448")
-          .resizable()
-          .scaledToFit()
-          .frame(width: 110)
-          .shadow(color: Color(red: 1, green: 0.75, blue: 0.43), radius: 30)
+        LabBackdrop()
+        VStack(spacing: 18) {
+          LumiView(mood: .happy, radius: 46)
+            .overlay(alignment: .topTrailing) {
+              FireflyView(lit: true, size: 34)
+                .offset(x: 22, y: -8)
+            }
+          FireflyRow(earned: Set(Firefly.allCases), size: 26)
+        }
       }
     }
   }
 
-  @ViewBuilder
+  private var hingeReadout: some View {
+    VStack(alignment: .trailing, spacing: 2) {
+      Text(ramp.hingeDegrees.map { "\(Int($0.rounded()))°" } ?? "—")
+        .font(LabFont.readout(size: angleSize))
+        .monospacedDigit()
+        .foregroundStyle(LabColor.primaryInk)
+        .contentTransition(.numericText())
+      Text("hinge angle")
+        .font(LabFont.caption)
+        .foregroundStyle(LabColor.tertiaryInk)
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Duo hinge angle")
+    .accessibilityValue(ramp.hingeDegrees.map { "\(Int($0.rounded())) degrees" } ?? "Unavailable")
+    .accessibilityHint("Move the Duo hinge to change this angle")
+  }
+
+  // MARK: The words half
+
   private var lowerPane: some View {
     VStack(alignment: .leading, spacing: 0) {
-      HStack {
-        Text("LUMI’S LAB  /  CHAPTER 3")
-          .font(.system(.caption2, design: .rounded, weight: .bold))
-          .tracking(1.7)
-          .foregroundStyle(.white.opacity(0.58))
-        Spacer()
-        if onExitToMap != nil {
-          Button("Map") { onExitToMap?() }
-            .font(.system(.caption, design: .rounded, weight: .medium))
-            .foregroundStyle(.white.opacity(0.8))
-            .frame(minHeight: 44)
+      HStack(spacing: 20) {
+        if let onExitToMap {
+          MapCapsule(action: onExitToMap)
         }
+        ProgressDots(current: stage.progress, count: ChapterStage.steps)
+        Spacer(minLength: 0)
       }
-      .padding(.bottom, 8)
+      .padding(.bottom, 10)
 
       switch stage {
       case .door: EmptyView()
@@ -162,34 +162,26 @@ struct MarbleChapterView: View {
       }
     }
     .padding(.horizontal, 24)
-    .padding(.top, 20)
+    .padding(.top, 16)
     .padding(.bottom, 22)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .background(
-      LinearGradient(
-        colors: [Color(red: 0.18, green: 0.15, blue: 0.49), Color(red: 0.12, green: 0.10, blue: 0.35)],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-    )
+    .background(LabBackdrop(showsFireflies: false))
   }
 
   private var experimentControls: some View {
     VStack(alignment: .leading, spacing: 8) {
       ScrollView {
         VStack(alignment: .leading, spacing: 12) {
-          Text(ramp.fireflyAwake ? "The firefly is awake" : "Wake the firefly")
-            .font(.system(.title2, design: .rounded, weight: .bold))
+          title(ramp.fireflyAwake ? "The firefly is awake" : "Wake the firefly")
 
           if showObjective && !ramp.fireflyAwake {
             Text("Adjust the Duo’s hinge to change the ramp angle. Try to make the ball reach the firefly.")
-              .font(.system(.subheadline, design: .rounded))
-              .foregroundStyle(.white.opacity(0.88))
+              .font(LabFont.body)
+              .foregroundStyle(LabColor.secondaryInk)
+              .fixedSize(horizontal: false, vertical: true)
               .transition(.opacity)
           } else {
-            Text(experimentMessage)
-              .font(.system(.subheadline, design: .rounded))
-              .foregroundStyle(ramp.fireflyAwake ? Color(red: 1, green: 0.85, blue: 0.61) : .white.opacity(0.76))
+            experimentMessage
           }
 
           VStack(spacing: 10) {
@@ -214,13 +206,14 @@ struct MarbleChapterView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
       .scrollIndicators(.hidden)
+      .scrollBounceBehavior(.basedOnSize)
 
       if ramp.fireflyAwake {
-        chapterButton("What happened?", systemImage: "arrow.right") {
+        PrimaryLabButton(title: "What happened?", fillsWidth: false) {
           withAnimation(.smooth) { stage = .quiz }
         }
       } else {
-        chapterButton("Roll", systemImage: "circle.fill") {
+        PrimaryLabButton(title: "Roll", fillsWidth: false) {
           ramp.startTrial()
         }
         .disabled(!ramp.canRoll)
@@ -230,50 +223,63 @@ struct MarbleChapterView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
-  private var experimentMessage: String {
-    if ramp.fireflyAwake { return "Your marble reached the firefly." }
-    if ramp.isRolling { return "Watch where the marble stops." }
-    if ramp.hingeDegrees == nil { return "Open on iPhone Duo and move its hinge to begin." }
-    switch ramp.lastOutcome {
-    case .short: return "It stopped short. Change the hinge and try again."
-    case .long: return "It rolled past. Change the hinge and try again."
-    case .target: return "Your marble reached the firefly."
-    case nil: return "Adjust the hinge, then roll."
+  /// How the last roll went, in the lab’s kind colours: lavender to try again, mint when it worked.
+  @ViewBuilder
+  private var experimentMessage: some View {
+    if ramp.fireflyAwake {
+      feedback("Your marble reached the firefly.", systemImage: "checkmark", ink: LabColor.correct)
+    } else if ramp.isRolling {
+      message("Watch where the marble stops.")
+    } else if ramp.hingeDegrees == nil {
+      message("Open on iPhone Duo and move its hinge to begin.")
+    } else {
+      switch ramp.lastOutcome {
+      case .short: feedback("It stopped short. Change the hinge and try again.", systemImage: "arrow.counterclockwise", ink: LabColor.retry)
+      case .long: feedback("It rolled past. Change the hinge and try again.", systemImage: "arrow.counterclockwise", ink: LabColor.retry)
+      case .target: feedback("Your marble reached the firefly.", systemImage: "checkmark", ink: LabColor.correct)
+      case nil: message("Adjust the hinge, then roll.")
+      }
     }
   }
 
   private var quizControls: some View {
     VStack(alignment: .leading, spacing: 9) {
       if quiz.finished {
-        Text("The steep ball went farther")
-          .font(.system(.title2, design: .rounded, weight: .bold))
+        title("The steep ball went farther")
         Text("A steeper ramp accelerates the ball faster. Starting higher gives it more energy.")
-          .font(.system(.subheadline, design: .rounded))
-          .foregroundStyle(.white.opacity(0.86))
+          .font(LabFont.body)
+          .foregroundStyle(LabColor.secondaryInk)
+          .fixedSize(horizontal: false, vertical: true)
         Text("PE = mgh")
-          .font(.system(.title3, design: .rounded, weight: .semibold))
-          .foregroundStyle(Color(red: 1, green: 0.86, blue: 0.61))
+          .font(.system(.title2, design: .rounded, weight: .semibold))
+          .foregroundStyle(LabColor.lumi)
           .padding(.top, 3)
         Text("More height → more potential energy → more energy for motion.")
           .font(.system(.subheadline, design: .rounded))
-          .foregroundStyle(.white.opacity(0.76))
+          .foregroundStyle(LabColor.secondaryInk)
+          .fixedSize(horizontal: false, vertical: true)
         Spacer(minLength: 8)
-        chapterButton("Continue", systemImage: "arrow.right") {
+        PrimaryLabButton(title: "Continue", fillsWidth: false) {
           onCompleted?()
           withAnimation(.smooth) { stage = .next }
         }
       } else {
-        Text(quiz.isPlaying ? "Watch them roll" : "Which ball will travel farther?")
-          .font(.system(.title2, design: .rounded, weight: .bold))
+        HStack(alignment: .top, spacing: 12) {
+          LumiView(mood: quiz.isPlaying ? .wonder : .calm, radius: 15)
+            .frame(width: 40, height: 40)
+            .accessibilityHidden(true)
+          title(quiz.isPlaying ? "Watch them roll" : "Which ball will travel farther?")
+        }
         Text(quiz.isPlaying
              ? "Your pick rolls first. Then watch the other ball."
              : "Tap one of the two ramps above to make your prediction.")
-          .font(.system(.body, design: .rounded))
-          .foregroundStyle(.white.opacity(0.78))
+          .font(LabFont.body)
+          .foregroundStyle(LabColor.secondaryInk)
+          .fixedSize(horizontal: false, vertical: true)
         Spacer(minLength: 12)
         Text(quiz.isPlaying ? "Compare where each ball stops." : "Choose a ramp to run the experiment.")
           .font(.system(.subheadline, design: .rounded, weight: .medium))
-          .foregroundStyle(Color(red: 1, green: 0.85, blue: 0.61))
+          .foregroundStyle(LabColor.label)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -281,45 +287,46 @@ struct MarbleChapterView: View {
 
   private var nextInstructions: some View {
     VStack(alignment: .leading, spacing: 9) {
-      Text("Launch Angle")
-        .font(.system(.title, design: .rounded, weight: .bold))
+      title("Launch Angle")
       Text("The firefly is awake. The next experiment is ready to explore.")
-        .font(.system(.body, design: .rounded))
-        .foregroundStyle(.white.opacity(0.76))
+        .font(LabFont.body)
+        .foregroundStyle(LabColor.secondaryInk)
+        .fixedSize(horizontal: false, vertical: true)
       Spacer(minLength: 12)
-      chapterButton("Replay Marble Ramp", systemImage: "arrow.counterclockwise") {
+      PrimaryLabButton(title: "Replay Marble Ramp", fillsWidth: false) {
         ramp = MarbleChapterModel()
         quiz = MarbleQuizModel()
         showObjective = true
         withAnimation(.smooth) { stage = .door }
       }
-      if onExitToMap != nil {
-        Button("Back to map") { onExitToMap?() }
-          .font(.system(.subheadline, design: .rounded, weight: .medium))
-          .foregroundStyle(.white.opacity(0.76))
-          .frame(minHeight: 44)
+      if let onExitToMap {
+        QuietLabButton(title: "Back to map", action: onExitToMap)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
-  private func chapterButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-    Button(action: action) {
-      Label(title, systemImage: systemImage)
-        .font(.system(.body, design: .rounded, weight: .bold))
-        .foregroundStyle(Color(red: 0.17, green: 0.12, blue: 0.43))
-        .padding(.horizontal, 24)
-        .frame(minHeight: 54)
-        .background(
-          LinearGradient(
-            colors: [Color(red: 1, green: 0.96, blue: 0.87), Color(red: 0.79, green: 0.71, blue: 1)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          ),
-          in: Capsule()
-        )
-    }
-    .buttonStyle(.plain)
+  private func title(_ text: String) -> some View {
+    Text(text)
+      .font(LabFont.title)
+      .foregroundStyle(LabColor.primaryInk)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityAddTraits(.isHeader)
+  }
+
+  private func message(_ text: String) -> some View {
+    Text(text)
+      .font(LabFont.body)
+      .foregroundStyle(LabColor.secondaryInk)
+      .fixedSize(horizontal: false, vertical: true)
+  }
+
+  private func feedback(_ text: String, systemImage: String, ink: Color) -> some View {
+    Label(text, systemImage: systemImage)
+      .font(.system(.body, design: .rounded, weight: .medium))
+      .foregroundStyle(ink)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityElement(children: .combine)
   }
 }
 
@@ -328,4 +335,16 @@ private enum ChapterStage: Hashable {
   case experiment
   case quiz
   case next
+
+  static let steps = 3
+
+  /// The dot lit in the progress row: the door comes before the first.
+  var progress: Int {
+    switch self {
+    case .door: 0
+    case .experiment: 1
+    case .quiz: 2
+    case .next: 3
+    }
+  }
 }

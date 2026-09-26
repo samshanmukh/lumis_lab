@@ -75,6 +75,24 @@ enum LabColor {
   static let vineEdge = Color(hex: 0xDFFFFA)
   static let vineShadow = Color(hex: 0x7FF0E0)
 
+  // The Marble Ramp: the moon garden
+  static let gardenSky = Color(hex: 0x513BC8)
+  static let gardenHorizon = Color(hex: 0x8172CA)
+  static let gardenGlow = Color(hex: 0x8E7CF0)
+  static let gardenFarHills = Color(hex: 0x614DC7)
+  static let gardenNearHills = Color(hex: 0x4935B2)
+  static let hedge = Color(hex: 0x412FA4)
+  static let pathTop = Color(hex: 0x7C6CD0)
+  static let pathBottom = Color(hex: 0x3F2DA0)
+  static let pathEdge = Color(hex: 0xD9CCFF)
+  static let rampShade = Color(hex: 0xC9B6FF)
+  static let rampShadeDeep = Color(hex: 0x7A62E0)
+  static let rampGlow = Color(hex: 0x9C86F0)
+  static let rampRail = Color(hex: 0xF4F1FF)
+  static let marbleCore = Color(hex: 0xFFFDF6)
+  static let petal = Color(hex: 0xE8DEFF)
+  static let flowerCup = Color(hex: 0x6A56C8)
+
   static let background = LinearGradient(
     colors: [backgroundTop, backgroundBottom],
     startPoint: .top,
