@@ -19,9 +19,16 @@ struct LabRootView: View {
   @State private var justFinished: RoomID?
   @State private var doorOpensAtOnce = false
   @State private var grownUps = GrownUpsFlow()
+  /// The Duo is open like a book: wider than tall, with the fold down the middle.
+  @State private var isOpenLikeBook = false
+
+  /// On the open Duo the grown-ups screens sit beside the journey rather than over it.
+  private var grownUpsBeside: Bool {
+    route == .journey && horizontalSizeClass == .regular && isOpenLikeBook
+  }
 
   var body: some View {
-    NavigationStack(path: $grownUps.path) {
+    NavigationStack(path: grownUpsBeside ? .constant([]) : $grownUps.path) {
       Group {
         switch route {
         case .outerWelcome:
@@ -38,6 +45,7 @@ struct LabRootView: View {
             askGrownUp: grownUps.askForPlus,
             openGrownUps: grownUps.openGrownUps
           )
+          .grownUpsBeside(grownUps, when: grownUpsBeside)
           .toolbar(.hidden, for: .navigationBar)
         case .door(let room):
           DoorView(
@@ -69,6 +77,12 @@ struct LabRootView: View {
         }
       }
       .grownUpsDestinations(grownUps)
+    }
+    .onGeometryChange(for: Bool.self) { proxy in
+      proxy.size.width > proxy.size.height
+        && proxy.reservedRegions(kind: .division, options: .includeInactive).contains { $0.frame.height > $0.frame.width }
+    } action: { openLikeBook in
+      isOpenLikeBook = openLikeBook
     }
     .grownUpsPaywall(grownUps)
     .tint(LabColor.retry)
@@ -110,6 +124,8 @@ struct LabRootView: View {
   /// Start resumes the saved step; a finished room replays from its door, keeping its fireflies.
   private func openRoom(_ room: RoomID) {
     guard room.isPlayable else { return }
+    // A grown-ups page open beside the journey closes as the family heads into a room.
+    grownUps.backToJourney()
     if room == .marbleRamp {
       openMarble()
       return

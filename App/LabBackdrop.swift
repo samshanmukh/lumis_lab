@@ -6,22 +6,25 @@ struct LabBackdrop: View {
   var showsFireflies = true
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.drawsLabBackdrop) private var drawsBackdrop
 
   var body: some View {
-    ZStack {
-      LabColor.background
-      TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
-        let time = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-        Canvas { context, size in
-          drawStars(at: time, in: &context, size: size)
-          if showsFireflies {
-            drawFireflies(at: time, in: &context, size: size)
+    if drawsBackdrop {
+      ZStack {
+        LabColor.background
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
+          let time = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
+          Canvas { context, size in
+            drawStars(at: time, in: &context, size: size)
+            if showsFireflies {
+              drawFireflies(at: time, in: &context, size: size)
+            }
           }
         }
+        .accessibilityHidden(true)
       }
-      .accessibilityHidden(true)
+      .ignoresSafeArea()
     }
-    .ignoresSafeArea()
   }
 
   private func drawStars(at time: TimeInterval, in context: inout GraphicsContext, size: CGSize) {
@@ -80,4 +83,10 @@ struct LabBackdrop: View {
       )
     }
   }
+}
+
+extension EnvironmentValues {
+  /// False where one backdrop already spans the screen behind two pages, so the pages on it
+  /// don’t draw their own and the sky stays put as they resize.
+  @Entry var drawsLabBackdrop = true
 }

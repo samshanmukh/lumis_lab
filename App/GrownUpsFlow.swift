@@ -44,12 +44,14 @@ final class GrownUpsFlow {
   var path: [GrownUpsRoute] = []
   var paywall: PaywallRequest?
 
+  /// Starts the grown-ups screens afresh. On the open Duo the journey stays tappable beside
+  /// them, so this can replace a grown-ups screen that is already showing.
   func askForPlus(_ room: RoomID) {
-    path.append(.askGrownUp(room))
+    path = [.askGrownUp(room)]
   }
 
   func openGrownUps() {
-    path.append(.gate(.settings))
+    path = [.gate(.settings)]
   }
 
   func showGate(for room: RoomID) {
@@ -106,26 +108,90 @@ extension View {
   /// The grown-ups screens, pushed on a NavigationStack bound to `flow.path`.
   func grownUpsDestinations(_ flow: GrownUpsFlow) -> some View {
     navigationDestination(for: GrownUpsRoute.self) { route in
-      Group {
-        switch route {
-        case .askGrownUp(let room):
-          AskGrownUpView(room: room, grownUp: { flow.showGate(for: room) }, notNow: flow.backToJourney)
-        case .gate(let target):
-          ParentGateView(pass: { flow.passGate(target) }, leave: { flow.leaveGate(target) })
-        case .unlocked(let room):
-          PlusUnlockedView(room: room, done: flow.backToJourney)
-        case .settings:
-          GrownUpsView(seePlans: flow.seePlans, done: flow.backToJourney)
-        }
-      }
-      .toolbar(.hidden, for: .navigationBar)
+      GrownUpsScreen(route: route, flow: flow)
+        .toolbar(.hidden, for: .navigationBar)
     }
+  }
+
+  /// On the open Duo, the grown-ups screens take the trailing page and this view (the journey)
+  /// keeps the leading one, instead of pushing over it. Keep the NavigationStack’s path empty
+  /// while `beside` is true.
+  func grownUpsBeside(_ flow: GrownUpsFlow, when beside: Bool) -> some View {
+    modifier(GrownUpsBeside(flow: flow, beside: beside))
   }
 
   /// The paywall sheet, presented over the whole stack. Attach it outside the NavigationStack.
   func grownUpsPaywall(_ flow: GrownUpsFlow) -> some View {
     sheet(item: Bindable(flow).paywall, onDismiss: flow.paywallDismissed) { _ in
       PlusPaywallSheet(finish: flow.endPaywall)
+    }
+  }
+}
+
+/// The grown-ups screen for a route, pushed full screen or on the page beside the journey.
+private struct GrownUpsScreen: View {
+  var route: GrownUpsRoute
+  var flow: GrownUpsFlow
+
+  var body: some View {
+    switch route {
+    case .askGrownUp(let room):
+      AskGrownUpView(room: room, grownUp: { flow.showGate(for: room) }, notNow: flow.backToJourney)
+    case .gate(let target):
+      ParentGateView(pass: { flow.passGate(target) }, leave: { flow.leaveGate(target) })
+    case .unlocked(let room):
+      PlusUnlockedView(room: room, done: flow.backToJourney)
+    case .settings:
+      GrownUpsView(seePlans: flow.seePlans, done: flow.backToJourney)
+    }
+  }
+}
+
+/// The journey and the grown-ups page either side of the fold, under one night sky that spans
+/// both, so nothing behind the journey moves as the page opens and closes. The page slides in
+/// from the trailing edge; its screens cross-fade. While it’s open, VoiceOver reads it first.
+private struct GrownUpsBeside: ViewModifier {
+  var flow: GrownUpsFlow
+  var beside: Bool
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func body(content: Content) -> some View {
+    let route = beside ? flow.path.last : nil
+    GeometryReader { proxy in
+      let fold = FoldSplit.foldX(in: proxy)
+      ZStack(alignment: .topLeading) {
+        if beside {
+          LabBackdrop()
+        }
+        content
+          .environment(\.drawsLabBackdrop, !beside)
+          .frame(width: route == nil ? proxy.size.width : fold, height: proxy.size.height)
+
+        if let route {
+          ZStack {
+            GrownUpsScreen(route: route, flow: flow)
+              .id(route)
+              .transition(.opacity)
+          }
+          .environment(\.drawsLabBackdrop, false)
+          .frame(width: max(0, proxy.size.width - fold), height: proxy.size.height)
+          .overlay(alignment: .leading) {
+            Rectangle()
+              .fill(.white.opacity(0.08))
+              .frame(width: 1)
+              .accessibilityHidden(true)
+          }
+          .offset(x: fold)
+          .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
+          .accessibilitySortPriority(1)
+        }
+      }
+      .accessibilityElement(children: .contain)
+    }
+    .animation(reduceMotion ? LabMotion.reduced : .smooth, value: route)
+    .onChange(of: route) {
+      AccessibilityNotification.ScreenChanged(nil).post()
     }
   }
 }
