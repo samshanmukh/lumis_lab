@@ -5,13 +5,15 @@ import SwiftUI
 struct CelebrationFireflies: View {
   var center: CGPoint
   var radiusX: CGFloat
+  /// Where each firefly settles, relative to the center at a 300 pt radius.
+  var settled: [CGSize] = Self.aboveTheCircle
   var finished: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var phase = 0
   @State private var visible = false
 
-  private let settled: [CGSize] = [
+  static let aboveTheCircle: [CGSize] = [
     CGSize(width: -230, height: -130), CGSize(width: -150, height: -170), CGSize(width: -75, height: -200),
     CGSize(width: 80, height: -192), CGSize(width: 160, height: -162), CGSize(width: 235, height: -122)
   ]

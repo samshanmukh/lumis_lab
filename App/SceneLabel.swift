@@ -7,6 +7,8 @@ struct SceneLabel: View {
     case real
     case reflection
     case goal(met: Bool)
+    /// A passive name in the room’s own ink, such as “in glass: slower”.
+    case tinted(Color)
   }
 
   var text: String
@@ -42,6 +44,7 @@ struct SceneLabel: View {
     case .real: LabColor.softLight.opacity(0.92)
     case .reflection: LabColor.label
     case .goal(let met): met ? LabColor.progress : LabColor.sceneLabelInk
+    case .tinted(let ink): ink
     }
   }
 

@@ -1,33 +1,59 @@
 import SwiftUI
 
+/// A room whose checkpoints the board asks. Each room supplies its question and routes.
+@MainActor
+protocol CheckpointRoom: AnyObject {
+  var step: RoomStep { get }
+  var checkpoint: CheckpointState { get }
+  var checkpointQuestion: CheckpointQuestion { get }
+  var checkpointFeedback: String? { get }
+  /// The primary after a right answer: “Next”, or the next room on the last checkpoint.
+  var checkpointForwardTitle: String { get }
+  func answer(_ choice: CheckpointChoice)
+  func checkpointForward()
+}
+
+struct CheckpointQuestion {
+  var title: String
+  var detail: String?
+  var options: [CheckpointOption]
+}
+
+struct CheckpointOption {
+  var choice: CheckpointChoice
+  var title: String
+  var outline: ChoiceChip.Outline
+}
+
 /// The frosted-glass question board on a checkpoint. A tap is judged at once;
 /// then the feedback fades in and the two buttons rise in.
 struct CheckpointBoard: View {
-  var room: MirrorRoomModel
+  var room: any CheckpointRoom
   var seeIt: () -> Void
 
   var body: some View {
-    let isFirst = room.step == .checkpoint1
+    let question = room.checkpointQuestion
     let outcome = room.checkpoint.outcome
 
     GeometryReader { geometry in
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          Text(isFirst ? "At 90°, how many Lumis?" : "For more Lumis, move the mirrors…")
+          Text(question.title)
             .font(LabFont.title)
             .foregroundStyle(LabColor.primaryInk)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
 
-          if isFirst {
-            Text("Count the real Lumi too.")
+          if let detail = question.detail {
+            Text(detail)
               .font(LabFont.body)
               .foregroundStyle(LabColor.secondaryInk)
+              .fixedSize(horizontal: false, vertical: true)
               .padding(.top, 8)
           }
 
-          choices(isFirst: isFirst)
-            .padding(.top, isFirst ? 28 : 24)
+          choices(question)
+            .padding(.top, 24)
 
           ZStack(alignment: .topLeading) {
             if let feedback = room.checkpointFeedback {
@@ -35,7 +61,7 @@ struct CheckpointBoard: View {
                 .font(.system(.title3, design: .rounded, weight: .semibold))
                 .foregroundStyle(LabColor.primaryInk)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 22)
+                .padding(.top, 20)
                 .transition(.opacity)
             } else {
               QuietLabButton(title: "I’m not sure") { room.answer(.notSure) }
@@ -45,14 +71,14 @@ struct CheckpointBoard: View {
             }
           }
 
-          Spacer(minLength: 32)
+          Spacer(minLength: 16)
 
           if let outcome {
             actions(for: outcome)
               .transition(.opacity.combined(with: .offset(y: 12)))
           }
         }
-        .padding(28)
+        .padding(24)
         .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .topLeading)
       }
       .scrollBounceBehavior(.basedOnSize)
@@ -64,42 +90,34 @@ struct CheckpointBoard: View {
   }
 
   @ViewBuilder
-  private func choices(isFirst: Bool) -> some View {
-    let picked = room.checkpoint.picked
-    let outcome = room.checkpoint.outcome
-    let locked = outcome != nil
+  private func choices(_ question: CheckpointQuestion) -> some View {
+    let allCircles = question.options.allSatisfy {
+      if case .circle = $0.outline { return true }
+      return false
+    }
     Group {
-      if isFirst {
-        HStack(spacing: 12) {
-          ForEach([2, 3, 4, 6], id: \.self) { value in
-            ChoiceChip(
-              title: "\(value)",
-              outline: .circle(64),
-              mark: mark(for: .number(value), picked: picked, outcome: outcome),
-              isLocked: locked
-            ) {
-              room.answer(.number(value))
-            }
-          }
-        }
+      if allCircles {
+        HStack(spacing: 12) { chips(question.options) }
       } else {
-        ViewThatFits(in: .horizontal) {
-          HStack(spacing: 12) { secondChoices(picked: picked, outcome: outcome, locked: locked) }
-          VStack(alignment: .leading, spacing: 12) { secondChoices(picked: picked, outcome: outcome, locked: locked) }
-        }
+        ChipFlow(spacing: 12) { chips(question.options) }
       }
     }
     .accessibilityElement(children: .contain)
-    .accessibilityLabel(isFirst ? "At 90°, how many Lumis? Count the real Lumi too." : "For more Lumis, move the mirrors…")
+    .accessibilityLabel([question.title, question.detail].compactMap { $0 }.joined(separator: " "))
   }
 
-  @ViewBuilder
-  private func secondChoices(picked: CheckpointChoice?, outcome: CheckpointOutcome?, locked: Bool) -> some View {
-    ChoiceChip(title: "Closer together", outline: .capsule, mark: mark(for: .closer, picked: picked, outcome: outcome), isLocked: locked) {
-      room.answer(.closer)
-    }
-    ChoiceChip(title: "Further apart", outline: .capsule, mark: mark(for: .further, picked: picked, outcome: outcome), isLocked: locked) {
-      room.answer(.further)
+  private func chips(_ options: [CheckpointOption]) -> some View {
+    let picked = room.checkpoint.picked
+    let outcome = room.checkpoint.outcome
+    return ForEach(options, id: \.choice) { option in
+      ChoiceChip(
+        title: option.title,
+        outline: option.outline,
+        mark: mark(for: option.choice, picked: picked, outcome: outcome),
+        isLocked: outcome != nil
+      ) {
+        room.answer(option.choice)
+      }
     }
   }
 
@@ -114,10 +132,9 @@ struct CheckpointBoard: View {
 
   @ViewBuilder
   private func actions(for outcome: CheckpointOutcome) -> some View {
-    let isFirst = room.step == .checkpoint1
     HStack(spacing: 12) {
       if outcome == .right {
-        PrimaryLabButton(title: isFirst ? "Next" : "Next: The Glass Pond", fillsWidth: false) {
+        PrimaryLabButton(title: room.checkpointForwardTitle, fillsWidth: false) {
           room.checkpointForward()
         }
         QuietLabButton(title: "Replay", action: seeIt)
@@ -126,5 +143,55 @@ struct CheckpointBoard: View {
         QuietLabButton(title: "Skip") { room.checkpointForward() }
       }
     }
+  }
+}
+
+/// Chips in rows: as many as fit on a line, the rest wrap below, so answers stay readable at
+/// any width and text size.
+struct ChipFlow: Layout {
+  var spacing: CGFloat = 12
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let rows = arrange(subviews, width: proposal.width ?? .infinity)
+    let width = rows.map { $0.width }.max() ?? 0
+    let height = rows.map { $0.height }.reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
+    return CGSize(width: width, height: height)
+  }
+
+  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    var y = bounds.minY
+    for row in arrange(subviews, width: bounds.width) {
+      var x = bounds.minX
+      for index in row.indices {
+        let size = subviews[index].sizeThatFits(.unspecified)
+        subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: ProposedViewSize(size))
+        x += size.width + spacing
+      }
+      y += row.height + spacing
+    }
+  }
+
+  private struct Row {
+    var indices: [Int] = []
+    var width: CGFloat = 0
+    var height: CGFloat = 0
+  }
+
+  private func arrange(_ subviews: Subviews, width: CGFloat) -> [Row] {
+    var rows: [Row] = []
+    var current = Row()
+    for index in subviews.indices {
+      let size = subviews[index].sizeThatFits(.unspecified)
+      let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+      if needed > width, !current.indices.isEmpty {
+        rows.append(current)
+        current = Row()
+      }
+      current.width = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+      current.height = max(current.height, size.height)
+      current.indices.append(index)
+    }
+    if !current.indices.isEmpty { rows.append(current) }
+    return rows
   }
 }

@@ -2,9 +2,9 @@ import SwiftUI
 
 struct JourneyView: View {
   var model: AppModel
-  var lightNewFireflies = false
-  var start: () -> Void
-  var startMarble: () -> Void
+  /// The room just finished: its fireflies light one by one.
+  var justFinished: RoomID?
+  var start: (RoomID) -> Void
   var askGrownUp: (RoomID) -> Void
   var openGrownUps: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -20,12 +20,12 @@ struct JourneyView: View {
     case plus
   }
 
-  private let stops: [(room: RoomID, subtitle: String)] = [
-    (.launchAngle, "After the Marble Ramp"),
-    (.marbleRamp, "Wake the firefly with the Duo hinge"),
-    (.glassPond, "After the Mirror Room"),
-    (.mirror, "How many Lumis can two mirrors make?")
-  ]
+  /// Bottom to top in journey order; a locked stop says which room it follows.
+  private var stops: [(room: RoomID, subtitle: String)] {
+    RoomID.allCases.reversed().map { room in
+      (room, room.previous.map { "After the \($0.shortTitle)" } ?? room.question)
+    }
+  }
 
   var body: some View {
     ScrollView {
@@ -44,8 +44,8 @@ struct JourneyView: View {
 
         ForEach(stops, id: \.room) { stop in
           stopView(stop.room, subtitle: stop.subtitle)
-          if stop.room != .mirror {
-            dottedTrail(active: stop.room == .glassPond && model.mirror.solved)
+          if let below = stop.room.previous {
+            dottedTrail(active: model.room(below).solved)
               .padding(.leading, 53)
           }
         }
@@ -61,14 +61,12 @@ struct JourneyView: View {
     .task { await lightFireflies() }
   }
 
+  /// A room is current once the one before it is done; the first room is current from the start.
   private func state(for room: RoomID) -> StopState {
     if room.needsPlus && !subscriptions.isPro { return .plus }
-    return switch room {
-    case .mirror: model.mirror.solved ? .done : .current
-    case .glassPond: model.mirror.solved ? .current : .locked
-    case .marbleRamp: model.progress.rooms[.marbleRamp]?.solved == true ? .done : .current
-    default: .locked
-    }
+    if model.room(room).solved { return .done }
+    if room.opensInOrder, let before = room.previous, !model.room(before).solved { return .locked }
+    return .current
   }
 
   @ViewBuilder
@@ -77,7 +75,7 @@ struct JourneyView: View {
     case .done:
       doneStop(room)
     case .current:
-      currentStop(room, subtitle: subtitle, startable: room == .mirror || room == .marbleRamp)
+      currentStop(room, subtitle: room.question, startable: room.isPlayable)
     case .locked:
       // With Plus, Launch Angle is open but not built yet.
       lockedStop(room, subtitle: room.needsPlus ? "Coming soon" : subtitle)
@@ -88,7 +86,7 @@ struct JourneyView: View {
 
   private func currentStop(_ room: RoomID, subtitle: String, startable: Bool) -> some View {
     Button {
-      if startable { open(room) } else { nudge(room) }
+      if startable { start(room) } else { nudge(room) }
     } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 116)
@@ -132,8 +130,8 @@ struct JourneyView: View {
   }
 
   private func doneStop(_ room: RoomID) -> some View {
-    let earned = model.progress.rooms[room]?.fireflies ?? []
-    return Button { open(room) } label: {
+    let earned = model.room(room).fireflies
+    return Button { start(room) } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 88)
           .shadow(color: LabColor.glow.opacity(0.35), radius: 14)
@@ -143,7 +141,7 @@ struct JourneyView: View {
           Text(room.title)
             .font(LabFont.label)
             .foregroundStyle(LabColor.primaryInk)
-          FireflyRow(earned: earned, size: 24, lightCount: litFireflies)
+          FireflyRow(earned: earned, size: 24, lightCount: room == justFinished ? litFireflies : 3)
           startPill
             .padding(.top, 4)
         }
@@ -274,10 +272,6 @@ struct JourneyView: View {
       .shadow(color: LabColor.shadow.opacity(0.35), radius: 8, y: 4)
   }
 
-  private func open(_ room: RoomID) {
-    if room == .marbleRamp { startMarble() } else { start() }
-  }
-
   private func nudge(_ room: RoomID) {
     guard !reduceMotion else { return }
     withAnimation(.spring(duration: 0.36, bounce: 0.48)) { nudgedRoom = room }
@@ -289,7 +283,7 @@ struct JourneyView: View {
 
   /// roomExit: the finished stop’s fireflies light one by one.
   private func lightFireflies() async {
-    guard lightNewFireflies, !reduceMotion else { return }
+    guard justFinished != nil, !reduceMotion else { return }
     litFireflies = 0
     try? await Task.sleep(for: .milliseconds(450))
     for count in 1...3 {

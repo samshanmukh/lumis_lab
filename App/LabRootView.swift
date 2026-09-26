@@ -1,12 +1,11 @@
 import SwiftUI
 
-private enum LabRoute {
+private enum LabRoute: Equatable {
   case outerWelcome
   case innerWelcome
   case journey
-  case door
-  case mirror
-  case marble
+  case door(RoomID)
+  case room(RoomID)
 }
 
 struct LabRootView: View {
@@ -15,8 +14,10 @@ struct LabRootView: View {
   @State private var model = AppModel()
   @State private var hinge = HingeModel()
   @State private var mirrorRoom: MirrorRoomModel?
+  @State private var pondRoom: GlassPondModel?
   @State private var route: LabRoute?
-  @State private var returningFromRoom = false
+  @State private var justFinished: RoomID?
+  @State private var doorOpensAtOnce = false
   @State private var grownUps = GrownUpsFlow()
 
   var body: some View {
@@ -32,24 +33,37 @@ struct LabRootView: View {
         case .journey:
           JourneyView(
             model: model,
-            lightNewFireflies: returningFromRoom,
-            start: openMirror,
-            startMarble: openMarble,
+            justFinished: justFinished,
+            start: openRoom,
             askGrownUp: grownUps.askForPlus,
             openGrownUps: grownUps.openGrownUps
           )
           .toolbar(.hidden, for: .navigationBar)
-        case .door:
-          DoorView(hinge: hinge, showsHint: !model.mirror.solved, goToMap: showMap, enterRoom: enterMirror)
-            .toolbar(.hidden, for: .navigationBar)
-        case .mirror:
+        case .door(let room):
+          DoorView(
+            room: room,
+            hinge: hinge,
+            showsHint: !model.room(room).solved,
+            opensAtOnce: doorOpensAtOnce,
+            goToMap: showMap,
+            enterRoom: { enter(room) }
+          )
+          .id(room)
+          .toolbar(.hidden, for: .navigationBar)
+        case .room(.mirror):
           if let mirrorRoom {
-            MirrorRoomView(room: mirrorRoom, map: showMap, leave: exitRoom)
+            MirrorRoomView(room: mirrorRoom, map: showMap, leave: exitRoom) { tapped in
+              goToDoor(.glassPond, opensAtOnce: tapped)
+            }
           }
-        case .marble:
+        case .room(.glassPond):
+          if let pondRoom {
+            GlassPondView(room: pondRoom, map: showMap, leave: exitRoom) { _ in openMarble() }
+          }
+        case .room(.marbleRamp):
           MarbleChapterView(onExitToMap: showMap, onCompleted: completeMarble)
             .toolbar(.hidden, for: .navigationBar)
-        case nil:
+        case .room, nil:
           Color.clear
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -74,34 +88,62 @@ struct LabRootView: View {
 
   private func enterDoor() {
     model.markWelcomeSeen()
-    model.setStep(.door)
-    withAnimation(LabMotion.room) { route = .door }
+    model.setStep(.door, room: .mirror)
+    withAnimation(LabMotion.room) { route = .door(.mirror) }
   }
 
-  private func enterMirror() {
-    model.setStep(.checkpoint1)
-    mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
-    withAnimation(LabMotion.step) { route = .mirror }
+  private func enter(_ room: RoomID) {
+    model.setStep(.checkpoint1, room: room)
+    makeModel(for: room)
+    doorOpensAtOnce = false
+    withAnimation(LabMotion.step) { route = .room(room) }
+  }
+
+  private func makeModel(for room: RoomID) {
+    switch room {
+    case .mirror: mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
+    case .glassPond: pondRoom = GlassPondModel(app: model, hinge: hinge)
+    case .marbleRamp, .launchAngle: break
+    }
   }
 
   /// Start resumes the saved step; a finished room replays from its door, keeping its fireflies.
-  private func openMirror() {
-    returningFromRoom = false
-    if model.mirror.solved {
-      model.setStep(.door)
+  private func openRoom(_ room: RoomID) {
+    guard room.isPlayable else { return }
+    if room == .marbleRamp {
+      openMarble()
+      return
     }
-    if model.mirror.step == .door {
-      withAnimation(LabMotion.room) { route = .door }
+    justFinished = nil
+    doorOpensAtOnce = false
+    if model.room(room).solved {
+      model.setStep(.door, room: room)
+    }
+    if model.room(room).step == .door {
+      withAnimation(LabMotion.room) { route = .door(room) }
     } else {
-      mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
-      withAnimation(LabMotion.room) { route = .mirror }
+      makeModel(for: room)
+      withAnimation(LabMotion.room) { route = .room(room) }
     }
   }
 
+  /// From a room’s end straight to the next room’s door; a tap there opens it by itself.
+  private func goToDoor(_ room: RoomID, opensAtOnce: Bool) {
+    model.setStep(.door, room: room)
+    justFinished = nil
+    doorOpensAtOnce = opensAtOnce
+    withAnimation(LabMotion.room) { route = .door(room) }
+    mirrorRoom = nil
+    pondRoom = nil
+  }
+
+  /// The Marble Ramp is its own chapter with its own door; it always starts there.
   private func openMarble() {
-    returningFromRoom = false
+    justFinished = nil
     model.setStep(.door, room: .marbleRamp)
-    withAnimation(LabMotion.room) { route = .marble }
+    withAnimation(LabMotion.room) { route = .room(.marbleRamp) }
+    mirrorRoom = nil
+    pondRoom = nil
   }
 
   private func completeMarble() {
@@ -113,15 +155,16 @@ struct LabRootView: View {
   }
 
   private func showMap() {
-    returningFromRoom = false
+    justFinished = nil
     withAnimation(LabMotion.room) { route = .journey }
   }
 
-  /// roomExit: back to the journey, where the new fireflies light one by one.
+  /// roomExit: back to the journey, where the finished room’s fireflies light one by one.
   private func exitRoom() {
-    returningFromRoom = true
+    if case .room(let room) = route { justFinished = room }
     withAnimation(LabMotion.room) { route = .journey }
     mirrorRoom = nil
+    pondRoom = nil
   }
 }
 
