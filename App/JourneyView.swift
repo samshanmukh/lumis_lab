@@ -58,7 +58,7 @@ struct JourneyView: View {
   /// A room is current once the one before it is done; the first room is current from the start.
   private func state(for room: RoomID) -> StopState {
     if model.room(room).solved { return .done }
-    if let before = room.previous, !model.room(before).solved { return .locked }
+    if room.opensInOrder, let before = room.previous, !model.room(before).solved { return .locked }
     return .current
   }
 

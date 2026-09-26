@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="26" height="26" viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Star mark" filter="url(#filter0_d_0_97)">
+<path d="M13 6C13.9333 9.73333 16.2667 12.0667 20 13C16.2667 13.9333 13.9333 16.2667 13 20C12.0667 16.2667 9.73333 13.9333 6 13C9.73333 12.0667 12.0667 9.73333 13 6Z" fill="#FFE3A6"/>
+</g>
+<defs>
+<filter id="filter0_d_0_97" x="0" y="0" width="26" height="26" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset/>
+<feGaussianBlur stdDeviation="3"/>
+<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 0.878431 0 0 0 0 0.4 0 0 0 0.8 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_97"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_97" result="shape"/>
+</filter>
+</defs>
+</svg>

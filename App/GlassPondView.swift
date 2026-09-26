@@ -7,6 +7,8 @@ struct GlassPondView: View {
   var room: GlassPondModel
   var map: () -> Void
   var leave: () -> Void
+  /// On to the Marble Ramp from the room’s end; true when its door was tapped there.
+  var enterNext: ((Bool) -> Void)? = nil
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var boardAway = false
@@ -63,7 +65,8 @@ struct GlassPondView: View {
             finished: GlassPondModel.id,
             app: room.app,
             split: FoldSplit(size: layout.size, insets: insets, foldX: layout.foldX, gap: 40, tallFirstShare: 0.5),
-            leave: leave
+            leave: leave,
+            enterNext: enterNext
           )
           .transition(.opacity)
         } else {
