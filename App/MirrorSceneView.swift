@@ -8,6 +8,8 @@ struct MirrorSceneView: View, Animatable {
   var radiusX: CGFloat
   var style: MirrorSceneStyle
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   var animatableData: Double {
     get { angle }
     set { angle = newValue }
@@ -223,7 +225,7 @@ struct MirrorSceneView: View, Animatable {
     let size = lumiSize(placement, crowded: crowded)
     let isBackInBeatOne = style.whyBeat == 0 && placement.bounces >= 2
     return LumiView(mood: style.mood, radius: size / 6, mirrored: placement.isMirrored)
-      .scaleEffect(style.pulsingLumi == placement.index ? 1.22 : 1)
+      .scaleEffect(style.pulsingLumi == placement.index && !reduceMotion ? 1.22 : 1)
       .brightness(style.pulsingLumi == placement.index ? 0.12 : 0)
       .opacity(placement.opacity * (isBackInBeatOne ? 0.28 : 1))
       .position(lumiCenter(placement, size: size))

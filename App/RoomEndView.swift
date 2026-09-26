@@ -131,6 +131,7 @@ struct RoomEndView: View {
 
   private func play() async {
     let start = ContinuousClock.now
+    AccessibilityNotification.Announcement("The Mirror Room done. Next: The Glass Pond.").post()
     if reduceMotion {
       litDots = travelledDots
       withAnimation(LabMotion.reduced) { ringShown = true }

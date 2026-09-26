@@ -12,7 +12,7 @@ struct MirrorHallBackdrop: View {
     GeometryReader { geometry in
       let size = geometry.size
       ZStack(alignment: .topLeading) {
-        LabBackdrop()
+        LabBackdrop(showsFireflies: false)
 
         Canvas { context, size in
           let scale = radiusX / 300
