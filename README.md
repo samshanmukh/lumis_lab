@@ -5,7 +5,13 @@
 Lumi’s Lab is a story-led physics playground for iPhone Duo. Instead of using the fold as a navigation trick, each room turns the physical hinge into part of the experiment: children predict an outcome, fold the device, observe what changes, learn why, and then use the idea to help Lumi.
 
 > [!NOTE]
-> **Repository status:** design and pre-build prototype. This repository currently contains the project brief and design references; a runnable Swift/Xcode target has not yet been committed. The Figma flows below describe approved product intent, not shipped functionality.
+> **Repository status:** a runnable SwiftUI iPhone target combines the GitHub journey and Mirror Room shell with the Marble Ramp chapter. The Mirror Room experiment and the other rooms remain future work.
+
+## Current build: The Marble Ramp
+
+The GitHub app shell opens to a welcome screen and journey map; Marble Ramp can be opened from the map. The chapter begins at a tappable two-panel door that swings open into the activity. In iPhone Duo’s passport layout, the upper pane holds the ramp experiment and the lower pane holds its objective, feedback, Roll button, and Friction, Gravity, and Mass sliders. The displayed hinge convention is 0° fully open, 90° perpendicular, and 180° closed. Moving the physical hinge changes the ramp continuously; each roll accelerates down the ramp and decelerates across the ground. Friction changes stopping distance, gravity changes acceleration, and mass changes marble size. Reaching the firefly unlocks a separate two-ramp visual quiz. After watching both marbles roll, the learner sees a short `PE = mgh` explanation and can continue to a Launch Angle introduction. Launch Angle itself is not yet implemented.
+
+`Project.json` defines the app target. Bitrig generates and builds it with Xcode 27.1 for the iPhone Duo simulator. The current Marble Ramp experiment requires hinge input and intentionally has no angle slider.
 
 ## The experience
 
@@ -25,7 +31,7 @@ The tone is curious rather than punitive. A wrong answer points the learner back
 | --- | --- | --- | --- |
 | [The Mirror Room](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=35-399) | The angle between two simulated mirrors | At ideal symmetric angles, 90° shows four total Lumis and 60° shows six | Hackathon MVP |
 | [The Glass Pond](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=27-25) | A light ray’s angle at a glass-to-air boundary | Near 42°, the ray skims the surface; past it, light is trapped by total internal reflection | Designed next |
-| [The Marble Ramp](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=66-1543) | The slope of a virtual ramp | A steeper ramp arrives sooner from the same height; changing the controlled setup changes the energy comparison | Designed |
+| [The Marble Ramp](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=69-1853) | The slope of a virtual ramp | A steeper ramp accelerates the marble faster and carries it farther in this simplified teaching model | Implemented chapter |
 | [Launch Angle](https://www.figma.com/design/4P9upmf1Jx3yqTOmvCRbpk/Lumi-s-Lab?node-id=66-1546) | A virtual launch angle | In the ideal model, 45° travels farthest while complementary angles such as 30° and 60° land together | Designed |
 
 ## Hackathon MVP
@@ -103,7 +109,7 @@ git clone https://github.com/samshanmukh/lumis_lab.git
 cd lumis_lab
 ```
 
-The Xcode project and build instructions will be added with the first runnable implementation. The planned development target is Xcode 27.1 with the iPhone Duo simulator and Device Hub for fold, rotation, resize, and display-state testing.
+Open this folder in Bitrig. Its `Project.json` generates the Xcode project; use the iOS 27.1 SDK and iPhone Duo simulator to test hinge input.
 
 ## License
 

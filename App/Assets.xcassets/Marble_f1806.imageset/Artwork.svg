@@ -1,0 +1,28 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Firefly &#194;&#183; lit">
+<g id="Glow" filter="url(#filter0_f_0_121)">
+<circle cx="15" cy="15" r="9.6" fill="#FFD27A" fill-opacity="0.45"/>
+</g>
+<ellipse id="Wing" cx="12.3" cy="12" rx="2.76" ry="1.68" transform="rotate(-35 12.3 12)" fill="white" fill-opacity="0.45"/>
+<ellipse id="Wing_2" cx="17.7" cy="12" rx="2.76" ry="1.68" transform="rotate(35 17.7 12)" fill="white" fill-opacity="0.45"/>
+<g id="Body" filter="url(#filter1_d_0_121)">
+<circle cx="15" cy="15" r="2.04" fill="#FFF4D6"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_f_0_121" x="0" y="0" width="30" height="30" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feGaussianBlur stdDeviation="2.7" result="effect1_foregroundBlur_0_121"/>
+</filter>
+<filter id="filter1_d_0_121" x="9.36" y="9.36" width="11.28" height="11.28" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset/>
+<feGaussianBlur stdDeviation="1.8"/>
+<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 0.772549 0 0 0 0 0.419608 0 0 0 0.9 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_121"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_121" result="shape"/>
+</filter>
+</defs>
+</svg>

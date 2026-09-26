@@ -44,21 +44,14 @@ struct LumiView: View {
         .offset(y: radius * 0.15)
     }
     .frame(width: radius * 2.7, height: radius * 2.7)
-    .scaleEffect(x: (mirrored ? -1 : 1) * (breathing ? 1.03 : 1), y: breathing ? 1.03 : 1)
-    .onAppear { breathe(!reduceMotion) }
-    .onChange(of: reduceMotion) { _, reduce in breathe(!reduce) }
-    .accessibilityLabel("Lumi, \(String(describing: mood))")
-  }
-
-  /// Breathing: scale 1 → 1.03 over 3 s, on a loop.
-  private func breathe(_ on: Bool) {
-    if on {
-      withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) { breathing = true }
-    } else {
-      var transaction = Transaction()
-      transaction.disablesAnimations = true
-      withTransaction(transaction) { breathing = false }
+    .scaleEffect(x: mirrored ? -1 : 1, y: breathing ? 1.03 : 1)
+    .onAppear {
+      guard !reduceMotion else { return }
+      withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true)) {
+        breathing = true
+      }
     }
+    .accessibilityLabel("Lumi, \(String(describing: mood))")
   }
 
   private var face: some View {

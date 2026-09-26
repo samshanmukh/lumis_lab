@@ -17,17 +17,6 @@ enum LabColor {
   static let softLight = Color(hex: 0xFFF1C4)
   static let doorFrame = Color(hex: 0x6A58DD)
   static let doorLeaf = Color(hex: 0x5647C8)
-  static let buttonInk = Color(hex: 0x2B1E86)
-  static let mirrorGlow = Color(hex: 0xC3B0FF)
-  static let mirrorEdge = Color(hex: 0xFFF3DA)
-  static let sceneLabelInk = Color(hex: 0xDCD6FF)
-  static let sceneLabelLine = Color(hex: 0xCFC8FF)
-  static let glassFace = Color(hex: 0xE6E3FF)
-  static let floorInner = Color(hex: 0x7B6BE8)
-  static let floorOuter = Color(hex: 0x34289A)
-  static let floorGlow = Color(hex: 0xA58CFF)
-  static let panel = Color(hex: 0x4536A8)
-  static let shadow = Color(hex: 0x120E4A)
 
   static let background = LinearGradient(
     colors: [backgroundTop, backgroundBottom],

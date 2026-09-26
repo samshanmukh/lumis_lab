@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Firefly &#194;&#183; asleep">
+<ellipse id="Wing" cx="13.95" cy="13.5" rx="4.14" ry="2.52" transform="rotate(-35 13.95 13.5)" fill="white" fill-opacity="0.16"/>
+<ellipse id="Wing_2" cx="22.05" cy="13.5" rx="4.14" ry="2.52" transform="rotate(35 22.05 13.5)" fill="white" fill-opacity="0.16"/>
+<circle id="Body" cx="18" cy="18" r="3.06" fill="white" fill-opacity="0.28"/>
+</g>
+</svg>

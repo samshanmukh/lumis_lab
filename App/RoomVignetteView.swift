@@ -10,7 +10,6 @@ struct RoomVignetteView: View {
       .interpolation(.high)
       .aspectRatio(contentMode: .fit)
       .frame(width: size, height: size)
-      .clipShape(Circle())
       .accessibilityLabel(room.title)
   }
 }

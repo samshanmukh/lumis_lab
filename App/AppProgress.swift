@@ -38,8 +38,6 @@ enum RoomStep: String, Codable {
   case solved
   case roomEnd
 
-  var isCheckpoint: Bool { self == .checkpoint1 || self == .checkpoint2 }
-
   var progressIndex: Int {
     switch self {
     case .door: 0
