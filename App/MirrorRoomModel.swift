@@ -90,6 +90,28 @@ final class MirrorRoomModel {
 
   var checkpointNumber: Int { step == .checkpoint2 ? 2 : 1 }
 
+  var checkpointQuestion: CheckpointQuestion {
+    if step == .checkpoint2 {
+      CheckpointQuestion(
+        title: "For more Lumis, move the mirrors…",
+        options: [
+          CheckpointOption(choice: .closer, title: "Closer together"),
+          CheckpointOption(choice: .further, title: "Further apart")
+        ],
+        style: .words,
+        forwardTitle: "Next: The Glass Pond"
+      )
+    } else {
+      CheckpointQuestion(
+        title: "At 90°, how many Lumis?",
+        detail: "Count the real Lumi too.",
+        options: [2, 3, 4, 6].map { CheckpointOption(choice: .number($0), title: "\($0)") },
+        style: .numbers,
+        forwardTitle: "Next"
+      )
+    }
+  }
+
   func answer(_ choice: CheckpointChoice) {
     guard checkpoint.outcome == nil else { return }
     let isFirst = step == .checkpoint1
@@ -563,6 +585,8 @@ enum CheckpointChoice: Hashable {
   case number(Int)
   case closer
   case further
+  /// A worded choice, saved by its key.
+  case word(String)
   case notSure
 
   var savedValue: String {
@@ -570,6 +594,7 @@ enum CheckpointChoice: Hashable {
     case .number(let value): String(value)
     case .closer: "closer"
     case .further: "further"
+    case .word(let key): key
     case .notSure: "notSure"
     }
   }

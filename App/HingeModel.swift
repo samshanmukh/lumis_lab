@@ -22,6 +22,10 @@ final class HingeModel {
   var usesDial: Bool { source == .dial || status != .partiallyOpen }
   var mirrorAngle: Double { min(180, max(40, angle)) }
 
+  /// The Marble Ramp’s tilt: in laptop pose it’s the upright screen’s own tilt.
+  var rampAngle: Double { min(Self.rampRange.upperBound, max(Self.rampRange.lowerBound, 180 - angle)) }
+  static let rampRange: ClosedRange<Double> = 15...50
+
   @available(iOS 27.1, *)
   func receive(_ context: DeviceHingeContext) {
     guard let hinge = context.hinge else {
@@ -45,6 +49,10 @@ final class HingeModel {
     withAnimation(LabMotion.hinge) {
       angle = min(180, max(0, hinge.angle.degrees))
     }
+  }
+
+  func setRampAngle(_ ramp: Double, animation: Animation = LabMotion.hinge) {
+    setDialAngle(180 - min(Self.rampRange.upperBound, max(Self.rampRange.lowerBound, ramp)), animation: animation)
   }
 
   func setDialAngle(_ value: Double, animation: Animation = LabMotion.hinge) {

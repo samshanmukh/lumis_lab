@@ -17,6 +17,51 @@ enum RoomID: String, Codable, CaseIterable, Identifiable {
     }
   }
 
+  /// The name on the room’s door sign.
+  var signName: String {
+    switch self {
+    case .marbleRamp: "The Marble Ramp"
+    default: title
+    }
+  }
+
+  /// The number on the room’s door sign.
+  var number: Int {
+    switch self {
+    case .mirror: 1
+    case .glassPond: 2
+    case .marbleRamp: 3
+    case .launchAngle: 4
+    }
+  }
+
+  var story: String {
+    switch self {
+    case .mirror: "Lumi is alone in the dark. Can mirrors make friends for her?"
+    case .glassPond: "A moon lily is asleep under the glass. Can Lumi’s light reach it?"
+    case .marbleRamp: "A firefly fell asleep at the end of the path. Can Lumi’s marble roll far enough to wake it?"
+    case .launchAngle: "The moon bed is far away. Can Lumi throw her light into it?"
+    }
+  }
+
+  /// Rooms that can be played in this build. The others show “Coming soon”.
+  var isBuilt: Bool {
+    switch self {
+    case .mirror, .marbleRamp: true
+    case .glassPond, .launchAngle: false
+    }
+  }
+
+  /// Rooms played like a laptop: the door turns on its side before it opens.
+  var isLaptopRoom: Bool { self != .mirror }
+
+  /// The next room along the journey, if any.
+  var next: RoomID? {
+    let all = Self.allCases
+    guard let index = all.firstIndex(of: self), index + 1 < all.count else { return nil }
+    return all[index + 1]
+  }
+
   var vignetteName: String {
     switch self {
     case .mirror: "MirrorVignette"

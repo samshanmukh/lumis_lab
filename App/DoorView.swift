@@ -1,6 +1,10 @@
 import SwiftUI
 
+/// A room’s front door (X.0, X.0b, X.0o, X.1). One view that lays out from its container.
+/// Rooms played like a laptop hint at the turn: upright on the closed phone the door leans
+/// toward sideways, and when the closed phone turns sideways the door lies on its side.
 struct DoorView: View {
+  var room: RoomID
   var hinge: HingeModel
   var showsHint = true
   var goToMap: () -> Void
@@ -12,6 +16,7 @@ struct DoorView: View {
   @State private var hasEntered = false
   @State private var didBeginClosed = false
   @State private var ambient = false
+  @State private var lean = 0.0
   @State private var impactTrigger = 0
 
   private var openFraction: Double {
@@ -44,6 +49,7 @@ struct DoorView: View {
       // Opened all the way in one go: play the opening by itself.
       if didBeginClosed, status == .fullyOpen { openDoor() }
     }
+    .task(id: room) { await leanLoop() }
   }
 
   /// Laid out in full-screen coordinates, like the design: the door stands on the floor line
@@ -51,68 +57,50 @@ struct DoorView: View {
   private func doorScene(insets: EdgeInsets) -> some View {
     GeometryReader { geometry in
       let size = geometry.size
-      let centerX = doorCenterX(in: geometry, insets: insets)
-      let floorTop = size.height * 0.897
-      let doorHeight = min(size.height * 0.57, 520)
-      let doorWidth = min(size.width * 0.6, doorHeight * 0.727)
-      let doorY = floorTop - doorHeight / 2
-      // The words sit between the Map capsule and the top of the door, and shrink rather than spill.
-      let titleTop = insets.top + 64
-      let titleSpace = CGRect(x: 0, y: titleTop, width: size.width, height: max(60, floorTop - doorHeight - 16 - titleTop))
+      let sideways = room.isLaptopRoom && phoneIsClosed && size.width > size.height
+      let layout = DoorLayout(size: size, insets: insets, centerX: doorCenterX(in: geometry, insets: insets), sideways: sideways)
 
       ZStack(alignment: .topLeading) {
-        wallBackground(size: size, floorTop: floorTop, centerX: centerX, doorWidth: doorWidth)
+        wallBackground(size: size, layout: layout)
 
-        VStack(spacing: 7) {
-          Text("Room 1")
-            .font(LabFont.caption)
-            .foregroundStyle(LabColor.retry)
-          Text("The Mirror Room")
-            .font(LabFont.display)
-            .foregroundStyle(LabColor.primaryInk)
-            .lineLimit(1)
-          Text("Lumi is alone in the dark. Can mirrors make friends for her?")
-            .font(LabFont.body)
-            .foregroundStyle(LabColor.secondaryInk)
-            .multilineTextAlignment(.center)
-            .lineLimit(3)
+        signs(layout: layout, sideways: sideways, insets: insets, size: size)
+
+        if !sideways {
+          HStack {
+            sconce
+            Spacer()
+            sconce
+          }
+          .frame(width: layout.doorWidth + 2 * max(26, layout.doorWidth * 0.1))
+          .position(x: layout.center.x, y: layout.floorTop - layout.doorHeight * 0.835)
+          .transition(.opacity)
         }
-        .minimumScaleFactor(0.6)
-        .frame(maxWidth: min(size.width - insets.leading - insets.trailing - 80, 580), maxHeight: titleSpace.height)
-        .position(x: centerX, y: titleSpace.midY)
 
-        HStack {
-          sconce
-          Spacer()
-          sconce
-        }
-        .frame(width: doorWidth + 2 * max(26, doorWidth * 0.1))
-        .position(x: centerX, y: floorTop - doorHeight * 0.835)
-
-        door(width: doorWidth, height: doorHeight)
-          .position(x: centerX, y: doorY)
+        door(width: layout.doorWidth, height: layout.doorHeight)
+          .rotationEffect(.degrees(sideways ? -90 : (showsLean ? -lean : 0)), anchor: sideways ? .center : .bottom)
+          .position(layout.center)
 
         Button(action: openDoor) {
           Color.clear
-            .frame(width: doorWidth, height: doorHeight)
+            .frame(width: layout.tapSize.width, height: layout.tapSize.height)
             .contentShape(RoundedRectangle(cornerRadius: 22))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Open the Mirror Room door")
-        .accessibilityHint(phoneIsClosed ? "Or open your phone to go in" : "")
-        .position(x: centerX, y: doorY)
+        .accessibilityLabel("Open the \(room.title) door")
+        .accessibilityHint(phoneIsClosed ? (room.isLaptopRoom ? "Or open your phone like a laptop to go in" : "Or open your phone to go in") : "")
+        .position(layout.center)
         .allowsHitTesting(!isOpening && !hasEntered)
 
         if showsHint {
-          Text(phoneIsClosed ? "Open your phone to go in" : "Tap the door to go in")
+          Text(hintText(sideways: sideways))
             .font(LabFont.caption)
             .foregroundStyle(LabColor.secondaryInk)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            .frame(maxWidth: size.width - insets.leading - insets.trailing - 48, maxHeight: (size.height - floorTop) * 0.7)
+            .frame(maxWidth: size.width - insets.leading - insets.trailing - 48, maxHeight: (size.height - layout.floorTop) * 0.7)
             .contentTransition(.opacity)
-            .animation(.easeInOut(duration: 0.2), value: phoneIsClosed)
-            .position(x: centerX, y: floorTop + (size.height - floorTop) * 0.45)
+            .animation(.easeInOut(duration: 0.2), value: hintText(sideways: sideways))
+            .position(x: layout.center.x, y: layout.floorTop + (size.height - layout.floorTop) * 0.45)
             .accessibilityHidden(true)
         }
 
@@ -121,11 +109,62 @@ struct DoorView: View {
           .allowsHitTesting(!isOpening)
       }
       .frame(width: size.width, height: size.height)
+      .animation(reduceMotion ? LabMotion.reduced : .spring(duration: 0.6, bounce: 0.15), value: sideways)
     }
     .ignoresSafeArea()
   }
 
-  private func wallBackground(size: CGSize, floorTop: CGFloat, centerX: CGFloat, doorWidth: CGFloat) -> some View {
+  private var showsLean: Bool {
+    room.isLaptopRoom && phoneIsClosed && !reduceMotion
+  }
+
+  private func hintText(sideways: Bool) -> String {
+    guard phoneIsClosed else { return "Tap the door to go in" }
+    guard room.isLaptopRoom else { return "Open your phone to go in" }
+    return sideways ? "Now open it like a laptop" : "Turn it sideways, then open"
+  }
+
+  @ViewBuilder
+  private func signs(layout: DoorLayout, sideways: Bool, insets: EdgeInsets, size: CGSize) -> some View {
+    if sideways {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Room \(room.number)")
+          .font(LabFont.caption)
+          .foregroundStyle(LabColor.retry)
+        Text(room.signName)
+          .font(.system(.title2, design: .rounded, weight: .bold))
+          .foregroundStyle(LabColor.primaryInk)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .frame(width: max(120, layout.center.x - layout.doorHeight / 2 - insets.leading - 48), alignment: .leading)
+      .offset(x: insets.leading + 40, y: insets.top + 76)
+      .transition(.opacity)
+    } else {
+      // The words sit between the Map capsule and the top of the door, and shrink rather than spill.
+      let titleTop = insets.top + 64
+      let titleHeight = max(60, layout.floorTop - layout.doorHeight - 16 - titleTop)
+      VStack(spacing: 7) {
+        Text("Room \(room.number)")
+          .font(LabFont.caption)
+          .foregroundStyle(LabColor.retry)
+        Text(room.signName)
+          .font(LabFont.display)
+          .foregroundStyle(LabColor.primaryInk)
+          .lineLimit(1)
+        Text(room.story)
+          .font(LabFont.body)
+          .foregroundStyle(LabColor.secondaryInk)
+          .multilineTextAlignment(.center)
+          .lineLimit(3)
+      }
+      .minimumScaleFactor(0.6)
+      .frame(maxWidth: min(size.width - insets.leading - insets.trailing - 80, 580), maxHeight: titleHeight)
+      .position(x: layout.center.x, y: titleTop + titleHeight / 2)
+      .transition(.opacity)
+    }
+  }
+
+  private func wallBackground(size: CGSize, layout: DoorLayout) -> some View {
     ZStack(alignment: .topLeading) {
       LabColor.background
       HStack(spacing: size.width * 0.12) {
@@ -133,23 +172,23 @@ struct DoorView: View {
           Rectangle().fill(.white.opacity(0.035)).frame(width: 1)
         }
       }
-      .frame(width: size.width, height: floorTop)
+      .frame(width: size.width, height: layout.floorTop)
 
       Rectangle()
         .fill(LabColor.backgroundBottom)
-        .frame(width: size.width, height: size.height - floorTop)
-        .offset(y: floorTop)
+        .frame(width: size.width, height: size.height - layout.floorTop)
+        .offset(y: layout.floorTop)
       Rectangle()
         .fill(LabColor.shadow.opacity(0.6))
         .frame(width: size.width, height: 4)
-        .offset(y: floorTop)
+        .offset(y: layout.floorTop)
 
       Ellipse()
         .fill(LabColor.softLight.opacity(0.55))
-        .frame(width: doorWidth * 1.17, height: size.height * 0.118)
+        .frame(width: layout.tapSize.width * 1.17, height: size.height * 0.118)
         .blur(radius: 22)
         .opacity(ambient ? 1 : 0.6)
-        .position(x: centerX, y: floorTop + 10)
+        .position(x: layout.center.x, y: layout.floorTop + 10)
     }
     .frame(width: size.width, height: size.height)
     .accessibilityHidden(true)
@@ -186,9 +225,8 @@ struct DoorView: View {
         .frame(width: 3, height: height * 0.95)
         .shadow(color: LabColor.label, radius: 14)
 
-      RoomVignetteView(room: .mirror, size: min(width * 0.46, height * 0.38))
+      RoomVignetteView(room: room, size: min(width * 0.46, height * 0.38))
         .opacity(1 - openFraction)
-        .clipShape(Circle())
         .overlay(Circle().strokeBorder(LabColor.retry.opacity(1 - openFraction), lineWidth: 2))
         .offset(y: -height * 0.17)
     }
@@ -212,6 +250,19 @@ struct DoorView: View {
           .offset(y: height * 0.15)
       }
       .frame(width: width, height: height)
+  }
+
+  /// outerDoor lean: every 4 s the door leans 10° toward sideways and settles back (1.2 s).
+  private func leanLoop() async {
+    guard room.isLaptopRoom else { return }
+    while !Task.isCancelled {
+      try? await Task.sleep(for: .seconds(4))
+      guard !Task.isCancelled else { return }
+      guard showsLean else { continue }
+      withAnimation(.easeInOut(duration: 0.6)) { lean = 10 }
+      try? await Task.sleep(for: .milliseconds(600))
+      withAnimation(.easeInOut(duration: 0.6)) { lean = 0 }
+    }
   }
 
   private func openDoor() {
@@ -241,5 +292,31 @@ struct DoorView: View {
       return region.frame.midX
     }
     return insets.leading + (geometry.size.width - insets.leading - insets.trailing) / 2
+  }
+}
+
+/// Where the door and its floor go. Upright, the door stands on the floor line;
+/// on its side (the closed phone turned sideways), it lies across the wall like 3.0b.
+private struct DoorLayout {
+  var doorWidth: CGFloat
+  var doorHeight: CGFloat
+  var center: CGPoint
+  var floorTop: CGFloat
+  /// The door’s footprint on screen, which swaps sides when it lies down.
+  var tapSize: CGSize
+
+  init(size: CGSize, insets: EdgeInsets, centerX: CGFloat, sideways: Bool) {
+    floorTop = size.height * 0.897
+    if sideways {
+      doorHeight = min(size.width * 0.57, (size.height - insets.top - insets.bottom) * 0.85, 520)
+      doorWidth = doorHeight * 0.727
+      center = CGPoint(x: insets.leading + (size.width - insets.leading - insets.trailing) * 0.56, y: size.height * 0.54)
+      tapSize = CGSize(width: doorHeight, height: doorWidth)
+    } else {
+      doorHeight = min(size.height * 0.57, 520)
+      doorWidth = min(size.width * 0.6, doorHeight * 0.727)
+      center = CGPoint(x: centerX, y: floorTop - doorHeight / 2)
+      tapSize = CGSize(width: doorWidth, height: doorHeight)
+    }
   }
 }

@@ -3,34 +3,35 @@ import SwiftUI
 /// The frosted-glass question board on a checkpoint. A tap is judged at once;
 /// then the feedback fades in and the two buttons rise in.
 struct CheckpointBoard: View {
-  var room: MirrorRoomModel
+  var question: CheckpointQuestion
+  var state: CheckpointState
+  var feedback: String?
+  var answer: (CheckpointChoice) -> Void
+  var forward: () -> Void
   var seeIt: () -> Void
 
   var body: some View {
-    let isFirst = room.step == .checkpoint1
-    let outcome = room.checkpoint.outcome
-
     GeometryReader { geometry in
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          Text(isFirst ? "At 90°, how many Lumis?" : "For more Lumis, move the mirrors…")
+          Text(question.title)
             .font(LabFont.title)
             .foregroundStyle(LabColor.primaryInk)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
 
-          if isFirst {
-            Text("Count the real Lumi too.")
+          if let detail = question.detail {
+            Text(detail)
               .font(LabFont.body)
               .foregroundStyle(LabColor.secondaryInk)
               .padding(.top, 8)
           }
 
-          choices(isFirst: isFirst)
-            .padding(.top, isFirst ? 28 : 24)
+          choices
+            .padding(.top, question.detail == nil ? 24 : 28)
 
           ZStack(alignment: .topLeading) {
-            if let feedback = room.checkpointFeedback {
+            if let feedback {
               Text(feedback)
                 .font(.system(.title3, design: .rounded, weight: .semibold))
                 .foregroundStyle(LabColor.primaryInk)
@@ -38,7 +39,7 @@ struct CheckpointBoard: View {
                 .padding(.top, 22)
                 .transition(.opacity)
             } else {
-              QuietLabButton(title: "I’m not sure") { room.answer(.notSure) }
+              QuietLabButton(title: "I’m not sure") { answer(.notSure) }
                 .padding(.leading, -8)
                 .padding(.top, 14)
                 .transition(.opacity)
@@ -47,7 +48,7 @@ struct CheckpointBoard: View {
 
           Spacer(minLength: 32)
 
-          if let outcome {
+          if let outcome = state.outcome {
             actions(for: outcome)
               .transition(.opacity.combined(with: .offset(y: 12)))
           }
@@ -60,52 +61,42 @@ struct CheckpointBoard: View {
     .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
     .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).strokeBorder(.white.opacity(0.16), lineWidth: 1))
     .shadow(color: LabColor.shadow.opacity(0.35), radius: 15, y: 12)
-    .animation(LabMotion.step, value: outcome == nil)
+    .animation(LabMotion.step, value: state.outcome == nil)
   }
 
   @ViewBuilder
-  private func choices(isFirst: Bool) -> some View {
-    let picked = room.checkpoint.picked
-    let outcome = room.checkpoint.outcome
-    let locked = outcome != nil
+  private var choices: some View {
     Group {
-      if isFirst {
-        HStack(spacing: 12) {
-          ForEach([2, 3, 4, 6], id: \.self) { value in
-            ChoiceChip(
-              title: "\(value)",
-              outline: .circle(64),
-              mark: mark(for: .number(value), picked: picked, outcome: outcome),
-              isLocked: locked
-            ) {
-              room.answer(.number(value))
-            }
-          }
-        }
-      } else {
+      switch question.style {
+      case .numbers:
+        HStack(spacing: 12) { chips }
+      case .words:
         ViewThatFits(in: .horizontal) {
-          HStack(spacing: 12) { secondChoices(picked: picked, outcome: outcome, locked: locked) }
-          VStack(alignment: .leading, spacing: 12) { secondChoices(picked: picked, outcome: outcome, locked: locked) }
+          HStack(spacing: 12) { chips }
+          VStack(alignment: .leading, spacing: 12) { chips }
         }
       }
     }
     .accessibilityElement(children: .contain)
-    .accessibilityLabel(isFirst ? "At 90°, how many Lumis? Count the real Lumi too." : "For more Lumis, move the mirrors…")
+    .accessibilityLabel([question.title, question.detail].compactMap { $0 }.joined(separator: " "))
   }
 
-  @ViewBuilder
-  private func secondChoices(picked: CheckpointChoice?, outcome: CheckpointOutcome?, locked: Bool) -> some View {
-    ChoiceChip(title: "Closer together", outline: .capsule, mark: mark(for: .closer, picked: picked, outcome: outcome), isLocked: locked) {
-      room.answer(.closer)
-    }
-    ChoiceChip(title: "Further apart", outline: .capsule, mark: mark(for: .further, picked: picked, outcome: outcome), isLocked: locked) {
-      room.answer(.further)
+  private var chips: some View {
+    ForEach(question.options) { option in
+      ChoiceChip(
+        title: option.title,
+        outline: question.style == .numbers ? .circle(64) : .capsule,
+        mark: mark(for: option.choice),
+        isLocked: state.outcome != nil
+      ) {
+        answer(option.choice)
+      }
     }
   }
 
-  private func mark(for choice: CheckpointChoice, picked: CheckpointChoice?, outcome: CheckpointOutcome?) -> ChoiceChip.Mark {
-    guard choice == picked else { return .rest }
-    switch outcome {
+  private func mark(for choice: CheckpointChoice) -> ChoiceChip.Mark {
+    guard choice == state.picked else { return .rest }
+    switch state.outcome {
     case .right: return .right
     case .wrong: return .wrong
     default: return .rest
@@ -114,17 +105,35 @@ struct CheckpointBoard: View {
 
   @ViewBuilder
   private func actions(for outcome: CheckpointOutcome) -> some View {
-    let isFirst = room.step == .checkpoint1
     HStack(spacing: 12) {
       if outcome == .right {
-        PrimaryLabButton(title: isFirst ? "Next" : "Next: The Glass Pond", fillsWidth: false) {
-          room.checkpointForward()
-        }
+        PrimaryLabButton(title: question.forwardTitle, fillsWidth: false, action: forward)
         QuietLabButton(title: "Replay", action: seeIt)
       } else {
         PrimaryLabButton(title: "See it", fillsWidth: false, action: seeIt)
-        QuietLabButton(title: "Skip") { room.checkpointForward() }
+        QuietLabButton(title: "Skip", action: forward)
       }
     }
   }
+}
+
+/// A checkpoint’s question: its words, its choices and where Next goes.
+struct CheckpointQuestion {
+  enum Style {
+    case numbers
+    case words
+  }
+
+  var title: String
+  var detail: String?
+  var options: [CheckpointOption]
+  var style: Style
+  var forwardTitle: String
+}
+
+struct CheckpointOption: Identifiable {
+  var choice: CheckpointChoice
+  var title: String
+
+  var id: String { choice.savedValue }
 }

@@ -3,8 +3,7 @@ import SwiftUI
 struct JourneyView: View {
   var model: AppModel
   var lightNewFireflies = false
-  var start: () -> Void
-  var startMarble: () -> Void
+  var start: (RoomID) -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var nudgedRoom: RoomID?
   @State private var litFireflies = 3
@@ -12,73 +11,93 @@ struct JourneyView: View {
   private enum StopState {
     case current
     case done
+    case comingSoon
     case locked
   }
 
-  private let stops: [(room: RoomID, subtitle: String)] = [
-    (.launchAngle, "After the Marble Ramp"),
-    (.marbleRamp, "Wake the firefly with the Duo hinge"),
-    (.glassPond, "After the Mirror Room"),
-    (.mirror, "How many Lumis can two mirrors make?")
-  ]
-
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        Text("Lumi’s journey")
-          .font(LabFont.display)
-          .foregroundStyle(LabColor.primaryInk)
-          .padding(.bottom, 12)
+    ScrollViewReader { proxy in
+      ScrollView {
+        VStack(alignment: .leading, spacing: 0) {
+          Text("Lumi’s journey")
+            .font(LabFont.display)
+            .foregroundStyle(LabColor.primaryInk)
+            .padding(.bottom, 12)
 
-        Text("\(model.earnedFireflies) of 12 fireflies")
-          .font(LabFont.caption)
-          .foregroundStyle(LabColor.tertiaryInk)
-          .contentTransition(.numericText())
-          .padding(.bottom, 28)
+          Text("\(model.earnedFireflies) of 12 fireflies")
+            .font(LabFont.caption)
+            .foregroundStyle(LabColor.tertiaryInk)
+            .contentTransition(.numericText())
+            .padding(.bottom, 28)
 
-        ForEach(stops, id: \.room) { stop in
-          stopView(stop.room, subtitle: stop.subtitle)
-          if stop.room != .mirror {
-            dottedTrail(active: stop.room == .glassPond && model.mirror.solved)
-              .padding(.leading, 53)
+          let rooms = Array(RoomID.allCases.reversed())
+          ForEach(Array(rooms.enumerated()), id: \.element) { index, room in
+            stopView(room)
+              .id(room)
+            if index + 1 < rooms.count {
+              dottedTrail(active: model.state(rooms[index + 1]).solved)
+                .padding(.leading, 53)
+            }
           }
         }
+        .frame(maxWidth: 660, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 40)
+        .padding(.top, 40)
+        .padding(.bottom, 40)
       }
-      .frame(maxWidth: 660, alignment: .leading)
-      .frame(maxWidth: .infinity)
-      .padding(.horizontal, 40)
-      .padding(.top, 40)
-      .padding(.bottom, 40)
+      .defaultScrollAnchor(.bottom)
+      .onAppear {
+        // Start where the journey is: the room to play next.
+        if let focus = RoomID.allCases.first(where: { state(for: $0) == .current }), focus != .mirror {
+          proxy.scrollTo(focus, anchor: .center)
+        }
+      }
     }
-    .defaultScrollAnchor(.bottom)
     .background(LabBackdrop())
     .task { await lightFireflies() }
   }
 
   private func state(for room: RoomID) -> StopState {
-    switch room {
-    case .mirror: model.mirror.solved ? .done : .current
-    case .glassPond: model.mirror.solved ? .current : .locked
-    case .marbleRamp: model.progress.rooms[.marbleRamp]?.solved == true ? .done : .current
-    default: .locked
+    if model.state(room).solved { return .done }
+    if model.isStartable(room) { return .current }
+    let before = RoomID.allCases.prefix { $0 != room }
+    if !room.isBuilt, before.last.map({ model.state($0).solved }) ?? true { return .comingSoon }
+    return .locked
+  }
+
+  private func subtitle(for room: RoomID) -> String {
+    switch state(for: room) {
+    case .comingSoon: return "Coming soon"
+    case .current:
+      switch room {
+      case .mirror: return "How many Lumis can two mirrors make?"
+      case .marbleRamp: return "Can Lumi’s marble roll far enough?"
+      default: return ""
+      }
+    default:
+      // A room opens after the last playable room before it.
+      let before = RoomID.allCases.prefix { $0 != room }
+      guard let previous = room.isBuilt ? before.last(where: \.isBuilt) : before.last else { return "" }
+      return "After \(previous.title)"
     }
   }
 
   @ViewBuilder
-  private func stopView(_ room: RoomID, subtitle: String) -> some View {
+  private func stopView(_ room: RoomID) -> some View {
     switch state(for: room) {
     case .done:
       doneStop(room)
     case .current:
-      currentStop(room, subtitle: subtitle, startable: room == .mirror || room == .marbleRamp)
-    case .locked:
-      lockedStop(room, subtitle: subtitle)
+      currentStop(room)
+    case .comingSoon, .locked:
+      lockedStop(room)
     }
   }
 
-  private func currentStop(_ room: RoomID, subtitle: String, startable: Bool) -> some View {
+  private func currentStop(_ room: RoomID) -> some View {
     Button {
-      if startable { open(room) } else { nudge(room) }
+      start(room)
     } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 116)
@@ -88,42 +107,28 @@ struct JourneyView: View {
           Text(room.title)
             .font(.system(.title2, design: .rounded, weight: .semibold))
             .foregroundStyle(LabColor.primaryInk)
-          if startable {
-            Text(subtitle)
-              .font(LabFont.caption)
-              .foregroundStyle(LabColor.secondaryInk)
-              .fixedSize(horizontal: false, vertical: true)
-          }
-          Group {
-            if startable {
-              startPill
-            } else {
-              Text("Coming soon")
-                .font(LabFont.label)
-                .fixedSize()
-                .foregroundStyle(LabColor.secondaryInk)
-                .padding(.horizontal, 28)
-                .frame(height: 52)
-                .background(.white.opacity(0.08), in: Capsule())
-                .overlay(Capsule().strokeBorder(.white.opacity(0.16), lineWidth: 1))
-            }
-          }
-          .padding(.top, 10)
+          Text(subtitle(for: room))
+            .font(LabFont.caption)
+            .foregroundStyle(LabColor.secondaryInk)
+            .fixedSize(horizontal: false, vertical: true)
+          startPill
+            .padding(.top, 10)
         }
         Spacer(minLength: 0)
       }
-      .offset(x: nudgedRoom == room ? 6 : 0)
       .frame(maxWidth: .infinity, minHeight: 136, alignment: .leading)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(startable ? "\(room.title), \(subtitle)" : "\(room.title), coming soon")
-    .accessibilityHint(startable ? "Opens the \(room.title)" : "")
+    .accessibilityLabel("\(room.title), \(subtitle(for: room))")
+    .accessibilityHint("Opens \(room.title)")
   }
 
   private func doneStop(_ room: RoomID) -> some View {
-    let earned = model.progress.rooms[room]?.fireflies ?? []
-    return Button { open(room) } label: {
+    let earned = model.state(room).fireflies
+    return Button {
+      start(room)
+    } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 88)
           .shadow(color: LabColor.glow.opacity(0.35), radius: 14)
@@ -147,7 +152,7 @@ struct JourneyView: View {
     .accessibilityHint("Starts the room again from its door")
   }
 
-  private func lockedStop(_ room: RoomID, subtitle: String) -> some View {
+  private func lockedStop(_ room: RoomID) -> some View {
     Button {
       nudge(room)
     } label: {
@@ -161,7 +166,7 @@ struct JourneyView: View {
           Text(room.title)
             .font(LabFont.label)
             .foregroundStyle(LabColor.secondaryInk)
-          Text(subtitle)
+          Text(subtitle(for: room))
             .font(LabFont.caption)
             .foregroundStyle(LabColor.tertiaryInk)
             .fixedSize(horizontal: false, vertical: true)
@@ -173,8 +178,8 @@ struct JourneyView: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel("\(room.title), \(subtitle)")
-    .accessibilityHint("Coming later")
+    .accessibilityLabel("\(room.title), \(subtitle(for: room))")
+    .accessibilityHint("Not open yet")
   }
 
   private var startPill: some View {
@@ -186,10 +191,6 @@ struct JourneyView: View {
       .frame(height: 52)
       .background(LabColor.primaryButton, in: Capsule())
       .shadow(color: LabColor.shadow.opacity(0.35), radius: 8, y: 4)
-  }
-
-  private func open(_ room: RoomID) {
-    if room == .marbleRamp { startMarble() } else { start() }
   }
 
   private func nudge(_ room: RoomID) {
