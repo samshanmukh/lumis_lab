@@ -23,7 +23,7 @@ struct ContentView: View {
             } secondary: {
               lowerPane
             }
-            .arrangementViewStyle(.split.axes(.vertical))
+            .arrangementViewStyle(.split)
           }
         }
         .onHingeChange { _, newContext in
