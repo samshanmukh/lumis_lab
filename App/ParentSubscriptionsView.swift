@@ -77,11 +77,11 @@ struct ParentSubscriptionsView: View {
       if let offering = subscriptions.currentOffering {
         PaywallView(offering: offering, displayCloseButton: true)
           .onPurchaseCompleted { info in
-            subscriptions.receive(info)
+            subscriptions.completePurchase(info)
             showingPaywall = false
           }
           .onRestoreCompleted { info in
-            subscriptions.receive(info)
+            subscriptions.completeRestore(info)
             if subscriptions.isPro { showingPaywall = false }
           }
           .onPurchaseFailure { error in

@@ -96,7 +96,7 @@ final class SubscriptionStore {
     do {
       let result = try await Purchases.shared.purchase(package: package)
       guard !result.userCancelled else { return }
-      receive(result.customerInfo)
+      completePurchase(result.customerInfo)
       if !isPro {
         actionMessage = "Purchase completed, but Plus access is not active yet. Try Restore Purchases."
       }
@@ -113,10 +113,7 @@ final class SubscriptionStore {
     actionMessage = nil
 
     do {
-      receive(try await Purchases.shared.restorePurchases())
-      actionMessage = isPro
-        ? "Lumi’s Lab Plus access was restored."
-        : "No active Lumi’s Lab Plus purchase was found for this account."
+      completeRestore(try await Purchases.shared.restorePurchases())
     } catch {
       actionMessage = "Couldn’t restore purchases. Check your connection and try again. \(error.localizedDescription)"
     }
@@ -125,6 +122,18 @@ final class SubscriptionStore {
   func receive(_ info: CustomerInfo) {
     customerInfo = info
     customerError = nil
+  }
+
+  func completePurchase(_ info: CustomerInfo) {
+    receive(info)
+    actionMessage = nil
+  }
+
+  func completeRestore(_ info: CustomerInfo) {
+    receive(info)
+    actionMessage = isPro
+      ? "Lumi’s Lab Plus access was restored."
+      : "No active Lumi’s Lab Plus purchase was found for this account."
   }
 
   func recordPaywallError(_ error: Error) {
