@@ -200,7 +200,7 @@ struct MirrorStepPanel: View {
 }
 
 /// Three beats: the current one is a lemon pill. One adjustable accessibility element.
-private struct WhyPager: View {
+struct WhyPager: View {
   var beat: Int
   var count: Int
   var select: (Int) -> Void

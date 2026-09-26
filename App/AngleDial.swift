@@ -1,19 +1,49 @@
 import SwiftUI
 
+/// What the dial shows and sets. It always drives the hinge model, so every rule that reads
+/// the hinge works the same with the dial.
+struct DialScale {
+  var name: String
+  var range: ClosedRange<Double>
+  var detents: [Double]
+  /// The dial’s value for a hinge angle, and the hinge angle for a dial value.
+  var value: (Double) -> Double
+  var hingeAngle: (Double) -> Double
+
+  /// The Mirror Room: the mirror angle is the hinge angle, 40–180°, with detents at the neat angles.
+  static let mirror = DialScale(
+    name: "Mirror angle",
+    range: 40...180,
+    detents: [45, 60, 72, 90, 120, 180],
+    value: { min(180, max(40, $0)) },
+    hingeAngle: { $0 }
+  )
+
+  /// The Glass Pond: the light’s tilt, 0–60°.
+  static let lightTilt = DialScale(
+    name: "Light angle",
+    range: GlassOptics.tiltRange,
+    detents: [],
+    value: GlassOptics.tilt(forHinge:),
+    hingeAngle: GlassOptics.hinge(forTilt:)
+  )
+}
+
 struct AngleDial: View {
   @Bindable var hinge: HingeModel
+  var scale = DialScale.mirror
   @State private var dragging = false
   @State private var dragStart: Double?
   @State private var hapticTick = 0
   @State private var repeatTask: Task<Void, Never>?
 
-  private let snapAngles: [Double] = [45, 60, 72, 90, 120, 180]
+  private var current: Double { scale.value(hinge.angle) }
 
   var body: some View {
     HStack(spacing: 8) {
       stepButton("Decrease angle", systemImage: "chevron.left", delta: -1)
 
-      Text("\(Int(hinge.mirrorAngle.rounded()))°")
+      Text("\(Int(current.rounded()))°")
         .font(LabFont.readout(size: 28))
         .monospacedDigit()
         .foregroundStyle(dragging ? LabColor.label : LabColor.primaryInk)
@@ -22,27 +52,27 @@ struct AngleDial: View {
         .gesture(
           DragGesture(minimumDistance: 0)
             .onChanged { gesture in
-              if dragStart == nil { dragStart = hinge.mirrorAngle }
+              if dragStart == nil { dragStart = current }
               dragging = true
-              updateAngle((dragStart ?? hinge.mirrorAngle) + gesture.translation.width / 4)
+              updateAngle((dragStart ?? current) + gesture.translation.width / 4)
             }
             .onEnded { _ in
               dragging = false
               dragStart = nil
-              if let nearest = snapAngles.min(by: { abs($0 - hinge.mirrorAngle) < abs($1 - hinge.mirrorAngle) }),
-                 abs(nearest - hinge.mirrorAngle) <= 3 {
+              if let nearest = scale.detents.min(by: { abs($0 - current) < abs($1 - current) }),
+                 abs(nearest - current) <= 3 {
                 updateAngle(nearest)
               }
             }
         )
         .accessibilityElement()
-        .accessibilityLabel("Mirror angle")
-        .accessibilityValue("\(Int(hinge.mirrorAngle.rounded())) degrees")
+        .accessibilityLabel(scale.name)
+        .accessibilityValue("\(Int(current.rounded())) degrees")
         .accessibilityHint("Swipe up or down to change by one degree")
         .accessibilityAdjustableAction { direction in
           switch direction {
-          case .increment: updateAngle(hinge.mirrorAngle + 1)
-          case .decrement: updateAngle(hinge.mirrorAngle - 1)
+          case .increment: updateAngle(current + 1)
+          case .decrement: updateAngle(current - 1)
           @unknown default: break
           }
         }
@@ -57,7 +87,7 @@ struct AngleDial: View {
   }
 
   private func stepButton(_ title: String, systemImage: String, delta: Double) -> some View {
-    Button(title, systemImage: systemImage) { updateAngle(hinge.mirrorAngle + delta) }
+    Button(title, systemImage: systemImage) { updateAngle(current + delta) }
       .labelStyle(.iconOnly)
       .font(.headline)
       .foregroundStyle(LabColor.primaryInk)
@@ -68,7 +98,7 @@ struct AngleDial: View {
           repeatTask?.cancel()
           repeatTask = Task { @MainActor in
             while !Task.isCancelled {
-              updateAngle(hinge.mirrorAngle + delta)
+              updateAngle(current + delta)
               try? await Task.sleep(for: .milliseconds(95))
             }
           }
@@ -80,8 +110,9 @@ struct AngleDial: View {
   }
 
   private func updateAngle(_ value: Double) {
-    let before = Int(hinge.mirrorAngle) / 5
-    hinge.setDialAngle(value)
-    if Int(hinge.mirrorAngle) / 5 != before { hapticTick += 1 }
+    let before = Int(current) / 5
+    let clamped = min(scale.range.upperBound, max(scale.range.lowerBound, value))
+    hinge.setDialAngle(scale.hingeAngle(clamped))
+    if Int(current) / 5 != before { hapticTick += 1 }
   }
 }

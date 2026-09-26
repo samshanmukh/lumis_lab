@@ -4,7 +4,7 @@ import Observation
 /// The Mirror Room’s flow: checkpoints, the fold, the count, the why beats and the challenge.
 @MainActor
 @Observable
-final class MirrorRoomModel {
+final class MirrorRoomModel: CheckpointRoom {
   static let tryItGoal: Double = 90
   static let challengeGoal: Double = 60
   static let rightCount = 4
@@ -128,6 +128,25 @@ final class MirrorRoomModel {
     default: nil
     }
   }
+
+  var checkpointQuestion: CheckpointQuestion {
+    if step == .checkpoint1 {
+      return CheckpointQuestion(
+        title: "At 90°, how many Lumis?",
+        detail: "Count the real Lumi too.",
+        options: [2, 3, 4, 6].map { CheckpointOption(choice: .number($0), title: "\($0)", outline: .circle(64)) }
+      )
+    }
+    return CheckpointQuestion(
+      title: "For more Lumis, move the mirrors…",
+      options: [
+        CheckpointOption(choice: .closer, title: "Closer together", outline: .capsule),
+        CheckpointOption(choice: .further, title: "Further apart", outline: .capsule)
+      ]
+    )
+  }
+
+  var checkpointForwardTitle: String { step == .checkpoint1 ? "Next" : "Next: The Glass Pond" }
 
   /// Next (after a right answer) or Skip (after a wrong one or I’m not sure).
   func checkpointForward() {
@@ -563,6 +582,8 @@ enum CheckpointChoice: Hashable {
   case number(Int)
   case closer
   case further
+  /// A worded answer from another room, saved as its own value.
+  case option(String)
   case notSure
 
   var savedValue: String {
@@ -570,6 +591,7 @@ enum CheckpointChoice: Hashable {
     case .number(let value): String(value)
     case .closer: "closer"
     case .further: "further"
+    case .option(let value): value
     case .notSure: "notSure"
     }
   }

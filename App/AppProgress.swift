@@ -25,6 +25,59 @@ enum RoomID: String, Codable, CaseIterable, Identifiable {
     case .launchAngle: "LaunchVignette"
     }
   }
+
+  var number: Int { (Self.allCases.firstIndex(of: self) ?? 0) + 1 }
+
+  /// The name after “the”, as in “After the Glass Pond”.
+  var shortTitle: String {
+    switch self {
+    case .mirror: "Mirror Room"
+    case .glassPond: "Glass Pond"
+    case .marbleRamp: "Marble Ramp"
+    case .launchAngle: "Launch Angle"
+    }
+  }
+
+  /// Rooms built so far. The others show on the journey but can’t be started yet.
+  var isPlayable: Bool { self != .launchAngle }
+
+  /// Most rooms open once the one before is done. The Marble Ramp arrived as its own
+  /// chapter and can be played any time.
+  var opensInOrder: Bool { self != .marbleRamp }
+
+  /// Book rooms open straight from the closed phone; laptop rooms turn sideways first.
+  var playsLikeLaptop: Bool { self != .mirror }
+
+  var next: RoomID? {
+    let rooms = Self.allCases
+    guard let index = rooms.firstIndex(of: self), index + 1 < rooms.count else { return nil }
+    return rooms[index + 1]
+  }
+
+  var previous: RoomID? {
+    let rooms = Self.allCases
+    guard let index = rooms.firstIndex(of: self), index > 0 else { return nil }
+    return rooms[index - 1]
+  }
+
+  /// The journey’s question for the room you can start next.
+  var question: String {
+    switch self {
+    case .mirror: "How many Lumis can two mirrors make?"
+    case .glassPond: "Can light get stuck in glass?"
+    case .marbleRamp: "Wake the firefly with the Duo hinge"
+    case .launchAngle: ""
+    }
+  }
+
+  /// The story line above the room’s door.
+  var storyLine: String {
+    switch self {
+    case .mirror: "Lumi is alone in the dark. Can mirrors make friends for her?"
+    case .glassPond: "Lumi fell into a pond of magic glass. Can her light wake the moon lily?"
+    case .marbleRamp, .launchAngle: ""
+    }
+  }
 }
 
 enum RoomStep: String, Codable {

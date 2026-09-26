@@ -9,7 +9,10 @@ final class AppModel {
     progress = Self.load() ?? LabProgress()
   }
 
-  var mirror: RoomState { progress.rooms[.mirror] ?? RoomState() }
+  var mirror: RoomState { room(.mirror) }
+
+  func room(_ id: RoomID) -> RoomState { progress.rooms[id] ?? RoomState() }
+
   var earnedFireflies: Int { progress.rooms.values.reduce(0) { $0 + $1.fireflies.count } }
 
   func markWelcomeSeen() {
