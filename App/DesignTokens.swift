@@ -1,0 +1,61 @@
+import SwiftUI
+
+enum LabColor {
+  static let backgroundTop = Color(hex: 0x3A2E9E)
+  static let backgroundBottom = Color(hex: 0x1B1760)
+  static let primaryInk = Color(hex: 0xF4F1EA)
+  static let secondaryInk = Color(hex: 0xD6CFFF)
+  static let tertiaryInk = Color(hex: 0xB3A8F0)
+  static let correct = Color(hex: 0x7FF0C8)
+  static let retry = Color(hex: 0xB8A4FF)
+  static let progress = Color(hex: 0x6FE7FF)
+  static let label = Color(hex: 0xFFE066)
+  static let labelSurface = Color(hex: 0x241A78)
+  static let lumi = Color(hex: 0xFFE3A6)
+  static let glow = Color(hex: 0xFFC56B)
+  static let amber = Color(hex: 0xFFB54D)
+  static let softLight = Color(hex: 0xFFF1C4)
+  static let doorFrame = Color(hex: 0x6A58DD)
+  static let doorLeaf = Color(hex: 0x5647C8)
+
+  static let background = LinearGradient(
+    colors: [backgroundTop, backgroundBottom],
+    startPoint: .top,
+    endPoint: .bottom
+  )
+
+  static let primaryButton = LinearGradient(
+    colors: [Color(hex: 0xE4DEFF), Color(hex: 0xD0C7FF)],
+    startPoint: .top,
+    endPoint: .bottom
+  )
+}
+
+enum LabFont {
+  static let display = Font.system(.largeTitle, design: .rounded, weight: .bold)
+  static let title = Font.system(.title, design: .rounded, weight: .bold)
+  static let body = Font.system(.body, design: .rounded)
+  static let label = Font.system(.body, design: .rounded, weight: .semibold)
+  static let caption = Font.system(.footnote, design: .rounded, weight: .medium)
+  static let barLabel = Font.system(.caption2, design: .rounded, weight: .medium)
+  static func readout(size: CGFloat) -> Font { .system(size: size, weight: .semibold, design: .rounded) }
+}
+
+enum LabMotion {
+  static let step = Animation.spring(response: 0.42, dampingFraction: 0.9)
+  static let room = Animation.spring(response: 0.5, dampingFraction: 0.86)
+  static let door = Animation.spring(response: 0.7, dampingFraction: 0.86)
+  static let hinge = Animation.spring(response: 0.12, dampingFraction: 1)
+  static let panel = Animation.spring(response: 0.4, dampingFraction: 0.9)
+  static let reduced = Animation.easeInOut(duration: 0.2)
+}
+
+private extension Color {
+  init(hex: UInt32) {
+    self.init(
+      red: Double((hex >> 16) & 0xFF) / 255,
+      green: Double((hex >> 8) & 0xFF) / 255,
+      blue: Double(hex & 0xFF) / 255
+    )
+  }
+}
