@@ -4,6 +4,7 @@ struct JourneyView: View {
   var model: AppModel
   var lightNewFireflies = false
   var start: () -> Void
+  var startMarble: () -> Void
   var askGrownUp: (RoomID) -> Void
   var openGrownUps: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -21,7 +22,7 @@ struct JourneyView: View {
 
   private let stops: [(room: RoomID, subtitle: String)] = [
     (.launchAngle, "After the Marble Ramp"),
-    (.marbleRamp, "After the Glass Pond"),
+    (.marbleRamp, "Wake the firefly with the Duo hinge"),
     (.glassPond, "After the Mirror Room"),
     (.mirror, "How many Lumis can two mirrors make?")
   ]
@@ -65,6 +66,7 @@ struct JourneyView: View {
     return switch room {
     case .mirror: model.mirror.solved ? .done : .current
     case .glassPond: model.mirror.solved ? .current : .locked
+    case .marbleRamp: model.progress.rooms[.marbleRamp]?.solved == true ? .done : .current
     default: .locked
     }
   }
@@ -75,7 +77,7 @@ struct JourneyView: View {
     case .done:
       doneStop(room)
     case .current:
-      currentStop(room, subtitle: subtitle, startable: room == .mirror)
+      currentStop(room, subtitle: subtitle, startable: room == .mirror || room == .marbleRamp)
     case .locked:
       // With Plus, Launch Angle is open but not built yet.
       lockedStop(room, subtitle: room.needsPlus ? "Coming soon" : subtitle)
@@ -86,7 +88,7 @@ struct JourneyView: View {
 
   private func currentStop(_ room: RoomID, subtitle: String, startable: Bool) -> some View {
     Button {
-      if startable { start() } else { nudge(room) }
+      if startable { open(room) } else { nudge(room) }
     } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 116)
@@ -131,7 +133,7 @@ struct JourneyView: View {
 
   private func doneStop(_ room: RoomID) -> some View {
     let earned = model.progress.rooms[room]?.fireflies ?? []
-    return Button(action: start) {
+    return Button { open(room) } label: {
       HStack(alignment: .center, spacing: 24) {
         RoomVignetteView(room: room, size: 88)
           .shadow(color: LabColor.glow.opacity(0.35), radius: 14)
@@ -270,6 +272,10 @@ struct JourneyView: View {
       .frame(height: 52)
       .background(LabColor.primaryButton, in: Capsule())
       .shadow(color: LabColor.shadow.opacity(0.35), radius: 8, y: 4)
+  }
+
+  private func open(_ room: RoomID) {
+    if room == .marbleRamp { startMarble() } else { start() }
   }
 
   private func nudge(_ room: RoomID) {
