@@ -1,0 +1,40 @@
+{
+  "name": "LumisLab",
+  "options": {
+    "bundleIdPrefix": "app.bitrig.new.61621289d0a14debb9fdf6fb0a8fb329",
+    "deploymentTarget": {
+      "iOS": "18.0"
+    }
+  },
+  "packages": {
+    "RevenueCat": {
+      "url": "https://github.com/RevenueCat/purchases-ios-spm.git",
+      "from": "5.83.0"
+    }
+  },
+  "targets": {
+    "LumisLab": {
+      "type": "application",
+      "platform": "iOS",
+      "sources": ["App"],
+      "dependencies": [
+        { "package": "RevenueCat", "product": "RevenueCat" },
+        { "package": "RevenueCat", "product": "RevenueCatUI" }
+      ],
+      "settings": {
+        "base": {
+          "TARGETED_DEVICE_FAMILY": "1,2",
+          "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon"
+        }
+      },
+      "info": {
+        "path": "App/Info.plist",
+        "properties": {
+          "CFBundleDisplayName": "Lumi’s Lab",
+          "UILaunchScreen": {},
+          "RevenueCatProductionAPIKey": ""
+        }
+      }
+    }
+  }
+}
