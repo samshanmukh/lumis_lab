@@ -38,7 +38,7 @@ struct MarbleSceneView: View {
           .animation(.easeInOut(duration: 0.2), value: scene.lumiMood)
 
         if scene.flowerOpen {
-          FlowerWakes(fit: fit)
+          FlowerWakes(fit: fit, gathers: scene.firefliesGather)
         }
       }
       .frame(width: geometry.size.width, height: geometry.size.height)
@@ -319,6 +319,12 @@ struct MarbleSceneView: View {
       let gentleMid = gentle.pointOnRamp(220)
       drawPill("gentle: slow", at: fit.point(CGPoint(x: gentleMid.x, y: gentleMid.y + 30)), fit, in: &context)
       drawSameSpeed(fit, in: &context)
+    case .startHeights:
+      for (track, label) in [(gentle, "starts lower"), (steep, "starts higher")] {
+        let start = track.pointOnRamp(track.startDistance)
+        drawArrow(from: fit.point(CGPoint(x: start.x, y: start.y + 6)), to: fit.point(CGPoint(x: start.x, y: MarbleGarden.groundY - 4)), fit, dashed: true, in: &context)
+        drawPill(label, at: fit.point(CGPoint(x: start.x + 10, y: start.y - 40)), fit, in: &context)
+      }
     case .none:
       break
     }
@@ -415,10 +421,12 @@ struct MarbleSceneView: View {
   }
 
   private func drawMarble(at center: CGPoint, _ fit: GardenFit, in context: inout GraphicsContext) {
-    let radius = MarbleGarden.marbleRadius * fit.scale
+    // The artwork is drawn for the standard marble; a bigger or smaller one scales all of it.
+    let size = scene.marbleRadius / MarbleGarden.marbleRadius * fit.scale
+    let radius = MarbleGarden.marbleRadius * size
     context.drawLayer { layer in
-      layer.addFilter(.blur(radius: 5 * fit.scale))
-      let glow = 28 * fit.scale
+      layer.addFilter(.blur(radius: 5 * size))
+      let glow = 28 * size
       layer.fill(Path(ellipseIn: CGRect(x: center.x - glow, y: center.y - glow, width: glow * 2, height: glow * 2)), with: .color(LabColor.amber.opacity(0.34)))
     }
     context.fill(
@@ -429,13 +437,13 @@ struct MarbleSceneView: View {
           .init(color: Color(hex: 0xFFD68A), location: 0.6),
           .init(color: LabColor.amber, location: 1)
         ]),
-        center: CGPoint(x: center.x + 1.2 * fit.scale, y: center.y + 1.8 * fit.scale),
+        center: CGPoint(x: center.x + 1.2 * size, y: center.y + 1.8 * size),
         startRadius: 0,
-        endRadius: 15 * fit.scale
+        endRadius: 15 * size
       )
     )
     context.fill(
-      Path(ellipseIn: CGRect(x: center.x - 7 * fit.scale, y: center.y - 7 * fit.scale, width: 6.4 * fit.scale, height: 4.8 * fit.scale)),
+      Path(ellipseIn: CGRect(x: center.x - 7 * size, y: center.y - 7 * size, width: 6.4 * size, height: 4.8 * size)),
       with: .color(.white.opacity(0.85))
     )
   }
@@ -503,6 +511,8 @@ struct GardenFit {
 /// Solved: the firefly in the flower wakes and lifts off, and the others gather round.
 private struct FlowerWakes: View {
   var fit: GardenFit
+  /// The others gather round; once they stop, they drift off again.
+  var gathers = true
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var awake = false
@@ -521,11 +531,12 @@ private struct FlowerWakes: View {
       FireflyView(lit: true, size: 30 * fit.scale)
         .position(fit.point(CGPoint(x: flower.x, y: flower.y - (awake ? 56 : 0))))
       ForEach(gathering.indices, id: \.self) { index in
-        let target = awake ? gathering[index] : origins[index]
+        let target = awake && gathers ? gathering[index] : origins[index]
         FireflyView(lit: true, size: 22 * fit.scale)
           .position(fit.point(CGPoint(x: flower.x + target.x, y: flower.y + target.y)))
-          .opacity(awake ? 1 : 0)
+          .opacity(awake && gathers ? 1 : 0)
       }
+      .animation(reduceMotion ? LabMotion.reduced : .easeIn(duration: 1.2), value: gathers)
     }
     .task {
       try? await Task.sleep(for: .milliseconds(150))

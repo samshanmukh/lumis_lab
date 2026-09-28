@@ -117,10 +117,11 @@ struct MapCapsule: View {
 
 struct ProgressDots: View {
   var current: Int
+  var count = 6
 
   var body: some View {
     HStack(spacing: 6) {
-      ForEach(1...6, id: \.self) { index in
+      ForEach(1...count, id: \.self) { index in
         Capsule()
           .fill(index < current ? LabColor.progress.opacity(0.5) : index == current ? LabColor.progress : .white.opacity(0.22))
           .frame(width: index == current ? 22 : 8, height: 8)
@@ -128,6 +129,6 @@ struct ProgressDots: View {
     }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("Room progress")
-    .accessibilityValue("Step \(current) of 6")
+    .accessibilityValue("Step \(current) of \(count)")
   }
 }

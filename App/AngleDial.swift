@@ -37,6 +37,16 @@ struct DialScale {
     value: { min(HingeModel.rampRange.upperBound, max(HingeModel.rampRange.lowerBound, 180 - $0)) },
     hingeAngle: { 180 - $0 }
   )
+
+  /// The Marble Ramp chapter: its ramp follows the fold (54° × tanh(fold ÷ 95°)), 10–45°. No
+  /// detents, so any angle in between can wake the firefly.
+  static let chapterRamp = DialScale(
+    name: "Ramp angle",
+    range: 10...45,
+    detents: [],
+    value: MarbleChapterModel.rampDegrees(forOpeningAngle:),
+    hingeAngle: MarbleChapterModel.openingAngle(forRamp:)
+  )
 }
 
 struct AngleDial: View {

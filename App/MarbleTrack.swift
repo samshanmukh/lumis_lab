@@ -87,6 +87,31 @@ struct MarbleTrack: Equatable {
 
   var startCenter: CGPoint { marbleCenter(onRampAt: startDistance) }
 
+  /// The center of a marble of any size a fraction of the way down, from where it starts to where
+  /// the curve meets the path, measured along the track.
+  func descentCenter(_ fraction: Double, radius: CGFloat = MarbleGarden.marbleRadius) -> CGPoint {
+    var surface = [pointOnRamp(startDistance), curveStart]
+    let p0 = curveStart, p1 = MarbleGarden.foot, p2 = curveEnd
+    for step in 1...24 {
+      let t = CGFloat(step) / 24
+      let a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t
+      surface.append(CGPoint(x: a * p0.x + b * p1.x + c * p2.x, y: a * p0.y + b * p1.y + c * p2.y))
+    }
+    let lengths = zip(surface, surface.dropFirst()).map { hypot($1.x - $0.x, $1.y - $0.y) }
+    var remaining = lengths.reduce(0, +) * CGFloat(min(1, max(0, fraction)))
+    for index in lengths.indices {
+      let start = surface[index], end = surface[index + 1]
+      let length = max(0.0001, lengths[index])
+      guard remaining > length, index < lengths.count - 1 else {
+        let t = min(1, remaining / length)
+        let point = CGPoint(x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t)
+        return CGPoint(x: point.x + (end.y - start.y) / length * radius, y: point.y - (end.x - start.x) / length * radius)
+      }
+      remaining -= length
+    }
+    return CGPoint(x: curveEnd.x, y: curveEnd.y - radius)
+  }
+
   var restCenter: CGPoint {
     CGPoint(x: restX, y: MarbleGarden.groundY - MarbleGarden.marbleRadius + (reachesCup ? 4 : 0))
   }

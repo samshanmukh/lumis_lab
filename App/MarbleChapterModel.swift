@@ -31,8 +31,10 @@ struct MarbleChapterModel {
   private(set) var rotation = 0.0
   private(set) var lastOutcome: TrialOutcome?
   private(set) var fireflyAwake = false
+  /// The ramp a roll started on: moving the hinge mid-roll waits until the marble stops.
+  private(set) var rollRampDegrees: Double?
 
-  var rampDegrees: Double { 54 * tanh((hingeDegrees ?? 0) / 95) }
+  var rampDegrees: Double { rollRampDegrees ?? Self.rampDegrees(forFold: hingeDegrees ?? 0) }
   var isRolling: Bool { phase == .ramp || phase == .flat }
   var canRoll: Bool { hingeDegrees != nil && !isRolling && !fireflyAwake }
   var displayedFlatDistance: Double { 0.65 * tanh(flatDistance / 0.65) }
@@ -43,6 +45,20 @@ struct MarbleChapterModel {
 
   static func normalizedFoldAngle(fromRawOpeningAngle raw: Double) -> Double {
     min(180, max(0, 180 - raw))
+  }
+
+  static func rampDegrees(forFold fold: Double) -> Double {
+    54 * tanh(fold / 95)
+  }
+
+  /// The ramp for a hinge opening angle, as the dial shows it.
+  static func rampDegrees(forOpeningAngle opening: Double) -> Double {
+    rampDegrees(forFold: normalizedFoldAngle(fromRawOpeningAngle: opening))
+  }
+
+  /// The hinge opening angle that makes a ramp, so the dial can stand in for the hinge.
+  static func openingAngle(forRamp ramp: Double) -> Double {
+    180 - 95 * atanh(min(0.99, max(0, ramp / 54)))
   }
 
   mutating func updateHinge(rawOpeningAngle: Double?) {
@@ -60,6 +76,7 @@ struct MarbleChapterModel {
 
   mutating func startTrial() {
     guard canRoll else { return }
+    rollRampDegrees = rampDegrees
     rampProgress = 0
     flatDistance = 0
     speed = 0
@@ -93,6 +110,7 @@ struct MarbleChapterModel {
       speed = nextSpeed
       if speed <= 0 {
         phase = .stopped
+        rollRampDegrees = nil
         let difference = ballFraction - Self.targetFraction
         lastOutcome = abs(difference) <= Self.targetTolerance
           ? .target : (difference < 0 ? .short : .long)
@@ -103,6 +121,7 @@ struct MarbleChapterModel {
 
   private mutating func resetBall() {
     phase = .ready
+    rollRampDegrees = nil
     rampProgress = 0
     flatDistance = 0
     speed = 0

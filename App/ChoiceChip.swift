@@ -4,6 +4,8 @@ import SwiftUI
 struct ChoiceChip: View {
   enum Mark: Equatable {
     case rest
+    /// Chosen, before the scene shows whether it was right.
+    case picked
     case right
     case wrong
     case revealed
@@ -71,6 +73,7 @@ struct ChoiceChip: View {
   private var fill: Color {
     switch mark {
     case .rest: .white.opacity(0.07)
+    case .picked: .white.opacity(0.16)
     case .right: LabColor.correct.opacity(0.16)
     case .wrong: LabColor.retry.opacity(0.14)
     case .revealed: LabColor.correct.opacity(0.08)
@@ -80,6 +83,7 @@ struct ChoiceChip: View {
   private var ring: Color {
     switch mark {
     case .rest: .white.opacity(0.12)
+    case .picked: LabColor.primaryInk.opacity(0.85)
     case .right: LabColor.correct
     case .wrong: LabColor.retry
     case .revealed: LabColor.correct.opacity(0.6)
@@ -89,6 +93,7 @@ struct ChoiceChip: View {
   private var accessibilityValue: String {
     switch mark {
     case .rest: ""
+    case .picked: "Your pick"
     case .right: "Right"
     case .wrong: "Not quite"
     case .revealed: "The answer"

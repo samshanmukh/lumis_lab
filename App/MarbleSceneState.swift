@@ -5,12 +5,16 @@ import CoreGraphics
 struct MarbleSceneState: Equatable {
   var ramps: [RampMark] = []
   var restingMarbles: [CGPoint] = []
+  /// A heavier marble in the chapter’s lab looks bigger; it rolls the same.
+  var marbleRadius: CGFloat = MarbleGarden.marbleRadius
   var rolling: [RollingMarble] = []
   var trail: [CGPoint] = []
   var flags: [FlagMark] = []
   var showsStarLine = true
   var callouts: MarbleCallouts = .none
   var flowerOpen = false
+  /// With the flower open, the other fireflies gather round it; later they drift off again.
+  var firefliesGather = true
   var lumiMood: LumiMood = .wonder
   var labelPulse = 0
   var accessibilityValue = ""
@@ -33,19 +37,22 @@ struct FlagMark: Identifiable, Equatable {
 
   /// Groups rolls by where they stopped.
   static func marks(for rolls: [MarbleRoll]) -> [FlagMark] {
+    marks(for: rolls.map { (x: $0.track.restX, label: "\(Int($0.track.angle))°", landedAt: $0.landedAt) })
+  }
+
+  /// Groups stops by where they are, oldest first.
+  static func marks(for stops: [(x: CGFloat, label: String, landedAt: Date)]) -> [FlagMark] {
     var marks: [FlagMark] = []
-    for roll in rolls {
-      let x = roll.track.restX
-      let label = "\(Int(roll.track.angle))°"
-      if let existing = marks.firstIndex(where: { abs($0.x - x) < 4 }) {
-        marks[existing].labels.removeAll { $0 == label }
-        marks[existing].labels.insert(label, at: 0)
-        marks[existing].landedAt = roll.landedAt
+    for stop in stops {
+      if let existing = marks.firstIndex(where: { abs($0.x - stop.x) < 4 }) {
+        marks[existing].labels.removeAll { $0 == stop.label }
+        marks[existing].labels.insert(stop.label, at: 0)
+        marks[existing].landedAt = stop.landedAt
       } else {
-        marks.append(FlagMark(x: x, labels: [label], isNewest: false, landedAt: roll.landedAt))
+        marks.append(FlagMark(x: stop.x, labels: [stop.label], isNewest: false, landedAt: stop.landedAt))
       }
     }
-    if let last = rolls.last, let newest = marks.firstIndex(where: { abs($0.x - last.track.restX) < 4 }) {
+    if let last = stops.last, let newest = marks.firstIndex(where: { abs($0.x - last.x) < 4 }) {
       marks[newest].isNewest = true
     }
     return marks
@@ -61,4 +68,7 @@ enum MarbleCallouts: Equatable {
   case quickSlow
   /// Beat c: “same drop” and “same speed”.
   case sameDrop
+  /// The chapter’s two ramps from the top: a dashed drop from each start, “starts lower” and
+  /// “starts higher”.
+  case startHeights
 }

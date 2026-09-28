@@ -15,6 +15,7 @@ struct LabRootView: View {
   @State private var hinge = HingeModel()
   @State private var mirrorRoom: MirrorRoomModel?
   @State private var pondRoom: GlassPondModel?
+  @State private var marbleRoom: MarbleChapterRoom?
   @State private var route: LabRoute?
   @State private var justFinished: RoomID?
   @State private var doorOpensAtOnce = false
@@ -66,11 +67,14 @@ struct LabRootView: View {
           }
         case .room(.glassPond):
           if let pondRoom {
-            GlassPondView(room: pondRoom, map: showMap, leave: exitRoom) { _ in openMarble() }
+            GlassPondView(room: pondRoom, map: showMap, leave: exitRoom) { tapped in
+              goToDoor(.marbleRamp, opensAtOnce: tapped)
+            }
           }
         case .room(.marbleRamp):
-          MarbleChapterView(onExitToMap: showMap, onCompleted: completeMarble)
-            .toolbar(.hidden, for: .navigationBar)
+          if let marbleRoom {
+            MarbleChapterView(room: marbleRoom, map: showMap, leave: exitRoom)
+          }
         case .room, nil:
           Color.clear
             .toolbar(.hidden, for: .navigationBar)
@@ -117,22 +121,20 @@ struct LabRootView: View {
     switch room {
     case .mirror: mirrorRoom = MirrorRoomModel(app: model, hinge: hinge)
     case .glassPond: pondRoom = GlassPondModel(app: model, hinge: hinge)
-    case .marbleRamp, .launchAngle: break
+    case .marbleRamp: marbleRoom = MarbleChapterRoom(app: model, hinge: hinge)
+    case .launchAngle: break
     }
   }
 
   /// Start resumes the saved step; a finished room replays from its door, keeping its fireflies.
+  /// The Marble Ramp chapter keeps no place inside it, so it always starts at its door.
   private func openRoom(_ room: RoomID) {
     guard room.isPlayable else { return }
     // A grown-ups page open beside the journey closes as the family heads into a room.
     grownUps.backToJourney()
-    if room == .marbleRamp {
-      openMarble()
-      return
-    }
     justFinished = nil
     doorOpensAtOnce = false
-    if model.room(room).solved {
+    if model.room(room).solved || room == .marbleRamp {
       model.setStep(.door, room: room)
     }
     if model.room(room).step == .door {
@@ -151,23 +153,7 @@ struct LabRootView: View {
     withAnimation(LabMotion.room) { route = .door(room) }
     mirrorRoom = nil
     pondRoom = nil
-  }
-
-  /// The Marble Ramp is its own chapter with its own door; it always starts there.
-  private func openMarble() {
-    justFinished = nil
-    model.setStep(.door, room: .marbleRamp)
-    withAnimation(LabMotion.room) { route = .room(.marbleRamp) }
-    mirrorRoom = nil
-    pondRoom = nil
-  }
-
-  private func completeMarble() {
-    model.updateRoom(.marbleRamp) { state in
-      state.step = .solved
-      state.solved = true
-      state.fireflies.insert(.challenge)
-    }
+    marbleRoom = nil
   }
 
   private func showMap() {
@@ -181,6 +167,7 @@ struct LabRootView: View {
     withAnimation(LabMotion.room) { route = .journey }
     mirrorRoom = nil
     pondRoom = nil
+    marbleRoom = nil
   }
 }
 
