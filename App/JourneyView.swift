@@ -73,7 +73,7 @@ struct JourneyView: View {
   private func state(for room: RoomID) -> StopState {
     if room.needsPlus && !subscriptions.isPro { return .plus }
     if model.room(room).solved { return .done }
-    if room.opensInOrder, let before = room.previous, !model.room(before).solved { return .locked }
+    if let before = room.previous, !model.room(before).solved { return .locked }
     return .current
   }
 
