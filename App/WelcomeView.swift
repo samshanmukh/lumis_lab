@@ -16,7 +16,7 @@ struct WelcomeView: View {
             .fill(LabColor.glow.opacity(0.13))
             .frame(width: min(geometry.size.width * 0.8, 410))
             .blur(radius: 50)
-          LumiView(mood: awake ? .wonder : isOuter ? .sleepy : .wonder, radius: min(72, geometry.size.width * 0.14))
+          LumiView(mood: awake ? .wonder : .happy, radius: min(72, geometry.size.width * 0.14))
         }
         .frame(maxHeight: geometry.size.height * 0.38)
 
