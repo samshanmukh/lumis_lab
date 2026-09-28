@@ -1,55 +1,46 @@
 import SwiftUI
 
+/// The Marble Ramp’s door in the lab’s night sky. Lumi waits beside it, and its round window
+/// shows the garden ramp inside. A tap swings the doors open.
 struct ChapterDoorView: View {
   var onMap: (() -> Void)?
   var onEnter: () -> Void
   @State private var opening = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+  private let lumiRadius: CGFloat = 24
+
   var body: some View {
     GeometryReader { geometry in
       let size = geometry.size
+      let doorWidth = min(size.width * 0.57, 360)
       ZStack(alignment: .topLeading) {
-        LinearGradient(
-          colors: [Color(red: 0.22, green: 0.18, blue: 0.61), Color(red: 0.10, green: 0.08, blue: 0.35)],
-          startPoint: .top,
-          endPoint: .bottom
-        )
+        LabBackdrop()
 
-        ForEach(1..<6, id: \.self) { index in
-          Rectangle()
-            .fill(.white.opacity(0.035))
-            .frame(width: 1, height: size.height)
-            .position(x: size.width * CGFloat(index) / 6, y: size.height / 2)
-        }
-
-        if onMap != nil {
-          Button("‹  Map") { onMap?() }
-            .font(.system(.subheadline, design: .rounded, weight: .medium))
-            .foregroundStyle(.white.opacity(0.82))
-            .padding(.horizontal, 16)
-            .frame(minHeight: 44)
-            .background(.white.opacity(0.12), in: Capsule())
+        if let onMap {
+          MapCapsule(action: onMap)
             .position(x: 66, y: 54)
         }
 
         VStack(spacing: 7) {
           Text("Room 3")
-            .font(.system(.subheadline, design: .rounded))
-            .foregroundStyle(.white.opacity(0.72))
+            .font(LabFont.caption)
+            .foregroundStyle(LabColor.tertiaryInk)
           Text("The Marble Ramp")
-            .font(.system(.title, design: .rounded, weight: .bold))
+            .font(LabFont.title)
+            .foregroundStyle(LabColor.primaryInk)
+            .accessibilityAddTraits(.isHeader)
           Text("A firefly fell asleep at the end of the path. Can Lumi’s marble roll far enough to wake it?")
-            .font(.system(.subheadline, design: .rounded))
+            .font(LabFont.body)
             .multilineTextAlignment(.center)
-            .foregroundStyle(.white.opacity(0.76))
+            .foregroundStyle(LabColor.secondaryInk)
             .fixedSize(horizontal: false, vertical: true)
         }
         .frame(width: min(size.width * 0.80, 460))
         .position(x: size.width / 2, y: size.height * 0.18)
 
         Button(action: openDoor) {
-          door(width: min(size.width * 0.57, 360), height: size.height * 0.55)
+          door(width: doorWidth, height: size.height * 0.55)
         }
         .buttonStyle(.plain)
         .disabled(opening)
@@ -62,23 +53,15 @@ struct ChapterDoorView: View {
         lamp
           .position(x: size.width * 0.83, y: size.height * 0.46)
 
-        Rectangle()
-          .fill(
-            LinearGradient(
-              colors: [Color(red: 0.13, green: 0.10, blue: 0.39), Color(red: 0.09, green: 0.07, blue: 0.30)],
-              startPoint: .top,
-              endPoint: .bottom
-            )
+        LumiView(mood: opening ? .happy : .wonder, radius: lumiRadius)
+          .position(
+            x: max(lumiRadius * 1.5, (size.width - doorWidth) / 2 - lumiRadius * 1.7),
+            y: size.height * 0.9 - lumiRadius
           )
-          .overlay(alignment: .top) {
-            Rectangle().fill(.black.opacity(0.2)).frame(height: 3)
-          }
+          .animation(.easeInOut(duration: 0.2), value: opening)
+
+        floor
           .frame(height: size.height * 0.1)
-          .overlay {
-            Text("Tap the door to go in")
-              .font(.system(.subheadline, design: .rounded))
-              .foregroundStyle(.white.opacity(0.74))
-          }
           .position(x: size.width / 2, y: size.height * 0.95)
       }
       .frame(width: size.width, height: size.height)
@@ -86,22 +69,35 @@ struct ChapterDoorView: View {
     .ignoresSafeArea()
   }
 
+  private var floor: some View {
+    Rectangle()
+      .fill(LinearGradient(colors: [LabColor.floorOuter, LabColor.backgroundBottom], startPoint: .top, endPoint: .bottom))
+      .overlay(alignment: .top) {
+        Rectangle().fill(LabColor.floorGlow.opacity(0.35)).frame(height: 2)
+      }
+      .overlay {
+        Text("Tap the door to go in")
+          .font(LabFont.caption)
+          .foregroundStyle(LabColor.secondaryInk)
+      }
+  }
+
   private var lamp: some View {
     Capsule()
-      .fill(Color(red: 1, green: 0.95, blue: 0.66))
+      .fill(LabColor.softLight)
       .frame(width: 13, height: 20)
-      .shadow(color: Color(red: 1, green: 0.78, blue: 0.42), radius: 20)
+      .shadow(color: LabColor.glow, radius: 20)
   }
 
   private func door(width: CGFloat, height: CGFloat) -> some View {
     ZStack {
       RoundedRectangle(cornerRadius: 20)
-        .fill(Color(red: 0.42, green: 0.34, blue: 0.81))
-        .shadow(color: Color(red: 0.68, green: 0.54, blue: 1).opacity(0.42), radius: 24)
+        .fill(LabColor.doorFrame)
+        .shadow(color: LabColor.mirrorGlow.opacity(0.42), radius: 24)
       RoundedRectangle(cornerRadius: 14)
         .fill(
           LinearGradient(
-            colors: [Color(red: 0.33, green: 0.28, blue: 0.77), Color(red: 0.17, green: 0.13, blue: 0.52)],
+            colors: [LabColor.doorLeaf, LabColor.buttonInk],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
           )
@@ -109,9 +105,9 @@ struct ChapterDoorView: View {
         .padding(16)
 
       Rectangle()
-        .fill(Color(red: 1, green: 0.89, blue: 0.57))
+        .fill(LabColor.softLight)
         .frame(width: 3, height: height - 18)
-        .shadow(color: Color(red: 1, green: 0.79, blue: 0.39), radius: 10)
+        .shadow(color: LabColor.glow, radius: 10)
 
       HStack(spacing: 2) {
         doorLeaf(isLeft: true)
@@ -122,43 +118,73 @@ struct ChapterDoorView: View {
       .frame(width: width - 32, height: height * 0.47)
       .offset(y: height * 0.235)
 
-      Circle()
-        .fill(Color(red: 0.16, green: 0.13, blue: 0.47))
-        .frame(width: width * 0.46)
-        .overlay {
-          Circle().strokeBorder(Color(red: 0.68, green: 0.61, blue: 1).opacity(0.7), lineWidth: 6)
-        }
-        .overlay {
-          ZStack {
-            Path { path in
-              path.move(to: CGPoint(x: width * 0.16, y: width * 0.33))
-              path.addLine(to: CGPoint(x: width * 0.36, y: width * 0.20))
-              path.addLine(to: CGPoint(x: width * 0.36, y: width * 0.33))
-              path.closeSubpath()
-            }
-            .fill(Color(red: 0.75, green: 0.67, blue: 1).opacity(0.54))
-            Circle()
-              .fill(Color(red: 1, green: 0.79, blue: 0.39))
-              .frame(width: 18, height: 18)
-              .shadow(color: Color(red: 1, green: 0.7, blue: 0.31), radius: 13)
-              .offset(x: -width * 0.05, y: width * 0.055)
-          }
-        }
+      window(diameter: width * 0.46)
         .offset(y: -height * 0.23)
     }
     .frame(width: width, height: height)
   }
 
+  /// A round window onto the moon garden: the ramp, and the marble waiting at the top.
+  private func window(diameter: CGFloat) -> some View {
+    Canvas { context, size in
+      let floor = size.height * 0.7
+      context.fill(
+        Path(CGRect(origin: .zero, size: size)),
+        with: .linearGradient(
+          Gradient(colors: [LabColor.labelSurface, LabColor.gardenSky]),
+          startPoint: .zero,
+          endPoint: CGPoint(x: 0, y: floor)
+        )
+      )
+      for star in Self.windowStars {
+        let rect = CGRect(x: star.x * size.width, y: star.y * size.height, width: 2, height: 2)
+        context.fill(Path(ellipseIn: rect), with: .color(LabColor.secondaryInk.opacity(0.7)))
+      }
+      context.fill(
+        Path(CGRect(x: 0, y: floor, width: size.width, height: size.height - floor)),
+        with: .color(LabColor.pathTop.opacity(0.8))
+      )
+
+      let top = CGPoint(x: size.width * 0.2, y: size.height * 0.32)
+      let foot = CGPoint(x: size.width * 0.66, y: floor)
+      var rail = Path()
+      rail.move(to: top)
+      rail.addCurve(
+        to: foot,
+        control1: CGPoint(x: top.x + size.width * 0.1, y: top.y + (floor - top.y) * 0.3),
+        control2: CGPoint(x: foot.x - size.width * 0.14, y: floor)
+      )
+      context.drawGardenRamp(rail, top: top, floor: floor, scale: diameter / 170)
+      let marbleRadius = size.width * 0.06
+      context.drawMarble(
+        at: CGPoint(x: top.x + marbleRadius * 0.9, y: top.y - marbleRadius * 0.7),
+        radius: marbleRadius,
+        rotation: 0,
+        glowBlur: 4
+      )
+    }
+    .frame(width: diameter, height: diameter)
+    .clipShape(Circle())
+    .overlay {
+      Circle().strokeBorder(LabColor.mirrorGlow.opacity(0.7), lineWidth: 6)
+    }
+    .accessibilityHidden(true)
+  }
+
+  private static let windowStars: [(x: CGFloat, y: CGFloat)] = [
+    (0.3, 0.14), (0.52, 0.1), (0.7, 0.22), (0.82, 0.38), (0.44, 0.3), (0.6, 0.44)
+  ]
+
   private func doorLeaf(isLeft: Bool) -> some View {
     RoundedRectangle(cornerRadius: 7)
-      .fill(Color(red: 0.32, green: 0.27, blue: 0.72))
+      .fill(LabColor.doorLeaf)
       .overlay {
         RoundedRectangle(cornerRadius: 7)
-          .strokeBorder(Color(red: 0.66, green: 0.58, blue: 0.97).opacity(0.42), lineWidth: 1)
+          .strokeBorder(.white.opacity(0.16), lineWidth: 1)
       }
       .overlay(alignment: isLeft ? .trailing : .leading) {
         Capsule()
-          .fill(Color(red: 0.88, green: 0.82, blue: 1))
+          .fill(LabColor.secondaryInk)
           .frame(width: 6, height: 38)
           .padding(.horizontal, 8)
       }
