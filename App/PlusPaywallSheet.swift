@@ -2,9 +2,9 @@ import RevenueCat
 import RevenueCatUI
 import SwiftUI
 
-/// 7.4 · RevenueCat’s paywall for the current offering, only ever shown behind the parental
-/// gate. 7.6 replaces it in place when the store doesn’t finish; a cancelled purchase just
-/// stays on the paywall, and its close button ends the sheet.
+/// 7.4 · RevenueCat’s paywall for the current offering, full screen and only ever shown behind
+/// the parental gate. 7.6 replaces it in place when the store doesn’t finish; a cancelled
+/// purchase just stays on the paywall, and its close button ends it.
 struct PlusPaywallSheet: View {
   var finish: (PaywallEnding) -> Void
 
@@ -25,9 +25,18 @@ struct PlusPaywallSheet: View {
         ProgressView()
           .controlSize(.large)
           .tint(LabColor.primaryInk)
+          .accessibilityLabel("Loading Lumi’s Lab Plus")
           .frame(maxWidth: .infinity, maxHeight: .infinity)
           .background(LabBackdrop(showsFireflies: false))
-          .accessibilityLabel("Loading Lumi’s Lab Plus")
+          // Full screen has no swipe to close, so a slow store never traps the grown-up.
+          .overlay(alignment: .topTrailing) {
+            Button("Close", systemImage: "xmark") { finish(.closed) }
+              .labelStyle(.iconOnly)
+              .buttonStyle(.glass)
+              .buttonBorderShape(.circle)
+              .controlSize(.large)
+              .padding(20)
+          }
       case .paywall:
         if let offering {
           PaywallView(offering: offering, displayCloseButton: true)

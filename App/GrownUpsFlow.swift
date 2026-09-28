@@ -24,14 +24,14 @@ enum GateTarget: Hashable {
   case settings
 }
 
-/// A paywall sheet (7.4). `room` is the Plus room a kid asked for, or nil when a grown-up
-/// opened the plans from Grown-ups.
+/// The paywall (7.4). `room` is the Plus room a kid asked for, or nil when a grown-up opened
+/// the plans from Grown-ups.
 struct PaywallRequest: Identifiable {
   let id = UUID()
   var room: RoomID?
 }
 
-/// How a paywall sheet ended.
+/// How the paywall ended.
 enum PaywallEnding {
   case unlocked
   case notNow
@@ -77,7 +77,7 @@ final class GrownUpsFlow {
     paywall = PaywallRequest(room: nil)
   }
 
-  /// Moves the navigation under the sheet before it closes, so closing it reveals where the
+  /// Moves the navigation under the paywall before it closes, so closing it reveals where the
   /// family goes next. Plans opened from Grown-ups close back to Grown-ups.
   func endPaywall(_ ending: PaywallEnding) {
     if let room = paywall?.room {
@@ -90,7 +90,8 @@ final class GrownUpsFlow {
     paywall = nil
   }
 
-  /// A swipe down closes the paywall with no callback; it leaves the gate the way Cancel does.
+  /// The paywall’s own close button ends it with no callback; it leaves the gate the way Cancel
+  /// does.
   func paywallDismissed() {
     leaveGateIfShowing()
   }
@@ -120,9 +121,9 @@ extension View {
     modifier(GrownUpsBeside(flow: flow, beside: beside))
   }
 
-  /// The paywall sheet, presented over the whole stack. Attach it outside the NavigationStack.
+  /// The paywall, full screen over the whole stack. Attach it outside the NavigationStack.
   func grownUpsPaywall(_ flow: GrownUpsFlow) -> some View {
-    sheet(item: Bindable(flow).paywall, onDismiss: flow.paywallDismissed) { _ in
+    fullScreenCover(item: Bindable(flow).paywall, onDismiss: flow.paywallDismissed) { _ in
       PlusPaywallSheet(finish: flow.endPaywall)
     }
   }
