@@ -59,9 +59,9 @@ struct MarbleSceneView: View {
       Path(CGRect(x: 0, y: 0, width: size.width, height: skyBottom)),
       with: .linearGradient(
         Gradient(stops: [
-          .init(color: Color(hex: 0x241A78), location: 0),
-          .init(color: Color(hex: 0x513BC8), location: max(0.02, min(0.98, fit.y(260) / max(1, skyBottom)))),
-          .init(color: Color(hex: 0x8172CA), location: 1)
+          .init(color: LabColor.labelSurface, location: 0),
+          .init(color: LabColor.gardenSky, location: max(0.02, min(0.98, fit.y(260) / max(1, skyBottom)))),
+          .init(color: LabColor.gardenHorizon, location: 1)
         ]),
         startPoint: .zero,
         endPoint: CGPoint(x: 0, y: skyBottom)
@@ -71,7 +71,7 @@ struct MarbleSceneView: View {
     context.drawLayer { layer in
       layer.addFilter(.blur(radius: 25 * fit.scale))
       let glow = CGRect(x: size.width / 2 - 420 * fit.stretch, y: fit.y(328), width: 840 * fit.stretch, height: 180 * fit.scale)
-      layer.fill(Path(ellipseIn: glow), with: .color(Color(hex: 0x8E7CF0).opacity(0.22)))
+      layer.fill(Path(ellipseIn: glow), with: .color(LabColor.gardenGlow.opacity(0.22)))
     }
 
     for index in 0..<34 {
@@ -85,16 +85,16 @@ struct MarbleSceneView: View {
     let moon = fit.point(CGPoint(x: 566, y: 72))
     context.drawLayer { layer in
       layer.addFilter(.blur(radius: 18 * fit.scale))
-      layer.fill(Path(ellipseIn: CGRect(x: moon.x - 80 * fit.scale, y: moon.y - 80 * fit.scale, width: 160 * fit.scale, height: 160 * fit.scale)), with: .color(Color(hex: 0xFFE9B8).opacity(0.12)))
+      layer.fill(Path(ellipseIn: CGRect(x: moon.x - 80 * fit.scale, y: moon.y - 80 * fit.scale, width: 160 * fit.scale, height: 160 * fit.scale)), with: .color(LabColor.moonGlow.opacity(0.12)))
     }
     let moonRadius = 20 * fit.scale
     context.fill(
       Path(ellipseIn: CGRect(x: moon.x - moonRadius, y: moon.y - moonRadius, width: moonRadius * 2, height: moonRadius * 2)),
       with: .radialGradient(
         Gradient(stops: [
-          .init(color: Color(hex: 0xFFFEF6), location: 0),
+          .init(color: LabColor.moonCore, location: 0),
           .init(color: Color(hex: 0xFFF1CF), location: 0.7),
-          .init(color: Color(hex: 0xFFE2A8), location: 1)
+          .init(color: LabColor.moonRim, location: 1)
         ]),
         center: CGPoint(x: moon.x - 3 * fit.scale, y: moon.y - 3 * fit.scale),
         startRadius: 0,
@@ -116,11 +116,11 @@ struct MarbleSceneView: View {
   }
 
   private func drawGround(_ fit: GardenFit, in context: inout GraphicsContext, size: CGSize) {
-    context.fill(hills(fit, offset: 313.33, points: Self.farHills), with: .color(Color(hex: 0x614DC7)))
-    context.fill(hills(fit, offset: 358.21, points: Self.nearHills), with: .color(Color(hex: 0x4935B2)))
+    context.fill(hills(fit, offset: 313.33, points: Self.farHills), with: .color(LabColor.gardenFarHills))
+    context.fill(hills(fit, offset: 358.21, points: Self.nearHills), with: .color(LabColor.gardenNearHills))
 
     for hedge in Self.hedges {
-      context.fill(Path(ellipseIn: fit.rect(hedge)), with: .color(Color(hex: 0x412FA4)))
+      context.fill(Path(ellipseIn: fit.rect(hedge)), with: .color(LabColor.hedge))
     }
     for flower in Self.hedgeFlowers {
       let center = fit.point(flower)
@@ -133,16 +133,16 @@ struct MarbleSceneView: View {
     let pathTop = fit.y(418)
     context.fill(
       Path(CGRect(x: 0, y: pathTop, width: size.width, height: max(0, size.height - pathTop))),
-      with: .linearGradient(Gradient(colors: [Color(hex: 0x7C6CD0), Color(hex: 0x3F2DA0)]), startPoint: CGPoint(x: 0, y: pathTop), endPoint: CGPoint(x: 0, y: size.height))
+      with: .linearGradient(Gradient(colors: [LabColor.pathTop, LabColor.pathBottom]), startPoint: CGPoint(x: 0, y: pathTop), endPoint: CGPoint(x: 0, y: size.height))
     )
     context.fill(
       Path(CGRect(x: 0, y: fit.y(417), width: size.width, height: 2 * fit.scale)),
       with: .linearGradient(
         Gradient(stops: [
-          .init(color: Color(hex: 0xD9CCFF).opacity(0.15), location: 0),
-          .init(color: Color(hex: 0xD9CCFF).opacity(0.6), location: 0.4),
-          .init(color: Color(hex: 0xD9CCFF).opacity(0.6), location: 0.7),
-          .init(color: Color(hex: 0xD9CCFF).opacity(0.15), location: 1)
+          .init(color: LabColor.pathEdge.opacity(0.15), location: 0),
+          .init(color: LabColor.pathEdge.opacity(0.6), location: 0.4),
+          .init(color: LabColor.pathEdge.opacity(0.6), location: 0.7),
+          .init(color: LabColor.pathEdge.opacity(0.15), location: 1)
         ]),
         startPoint: CGPoint(x: 0, y: 0),
         endPoint: CGPoint(x: size.width, y: 0)
@@ -150,7 +150,7 @@ struct MarbleSceneView: View {
     )
     for index in 0..<6 {
       let stone = fit.rect(CGRect(x: 370 + CGFloat(index) * 46, y: 430.4, width: 32, height: 7.2))
-      context.fill(Path(ellipseIn: stone), with: .color(Color(hex: 0xC9B6FF).opacity(0.13)))
+      context.fill(Path(ellipseIn: stone), with: .color(LabColor.rampShade.opacity(0.13)))
       context.stroke(Path(ellipseIn: stone.insetBy(dx: 0.5, dy: 0.5)), with: .color(Color(hex: 0xE6DCFF).opacity(0.16)), lineWidth: 1)
     }
     for base in [CGFloat(10), 16, 22, 28, 646, 652, 658, 663] {
@@ -159,7 +159,7 @@ struct MarbleSceneView: View {
       let tip = fit.point(CGPoint(x: base + (base < 300 ? -3 : 3), y: 392 - CGFloat(Int(base) % 3) * 4))
       blade.move(to: root)
       blade.addQuadCurve(to: tip, control: CGPoint(x: root.x, y: (root.y + tip.y) / 2))
-      context.stroke(blade, with: .color(Color(hex: 0xC9B6FF).opacity(0.45)), style: StrokeStyle(lineWidth: 2 * fit.scale, lineCap: .round))
+      context.stroke(blade, with: .color(LabColor.rampShade.opacity(0.45)), style: StrokeStyle(lineWidth: 2 * fit.scale, lineCap: .round))
     }
   }
 
@@ -187,7 +187,7 @@ struct MarbleSceneView: View {
     let open = scene.flowerOpen
     context.fill(
       Path(ellipseIn: fit.rect(CGRect(x: 603, y: open ? 366 : 373, width: 18, height: 42))),
-      with: .linearGradient(Gradient(colors: [Color(hex: 0xF3EDFF).opacity(open ? 0.8 : 0.55), Color(hex: 0x7A62E0).opacity(0.3)]), startPoint: fit.point(CGPoint(x: 612, y: 373)), endPoint: fit.point(CGPoint(x: 612, y: 415)))
+      with: .linearGradient(Gradient(colors: [Color(hex: 0xF3EDFF).opacity(open ? 0.8 : 0.55), LabColor.rampShadeDeep.opacity(0.3)]), startPoint: fit.point(CGPoint(x: 612, y: 373)), endPoint: fit.point(CGPoint(x: 612, y: 415)))
     )
     for side in [-1.0, 1.0] {
       var petal = context
@@ -196,12 +196,12 @@ struct MarbleSceneView: View {
       petal.rotate(by: .degrees(side * (open ? 55 : 30)))
       petal.fill(
         Path(ellipseIn: CGRect(x: -9 * fit.scale, y: -40 * fit.scale, width: 18 * fit.scale, height: 44 * fit.scale)),
-        with: .linearGradient(Gradient(colors: [Color(hex: 0xE8DEFF).opacity(open ? 0.9 : 0.72), Color(hex: 0x7A62E0).opacity(0.45)]), startPoint: CGPoint(x: 0, y: -40 * fit.scale), endPoint: CGPoint(x: 0, y: 4 * fit.scale))
+        with: .linearGradient(Gradient(colors: [LabColor.petal.opacity(open ? 0.9 : 0.72), LabColor.rampShadeDeep.opacity(0.45)]), startPoint: CGPoint(x: 0, y: -40 * fit.scale), endPoint: CGPoint(x: 0, y: 4 * fit.scale))
       )
     }
     context.fill(
       Path(ellipseIn: fit.rect(CGRect(x: 591, y: 404.5, width: 42, height: 15))),
-      with: .linearGradient(Gradient(colors: [Color(hex: 0x6A56C8), Color(hex: 0x7363CD)]), startPoint: fit.point(CGPoint(x: 612, y: 404.5)), endPoint: fit.point(CGPoint(x: 612, y: 419.5)))
+      with: .linearGradient(Gradient(colors: [LabColor.flowerCup, Color(hex: 0x7363CD)]), startPoint: fit.point(CGPoint(x: 612, y: 404.5)), endPoint: fit.point(CGPoint(x: 612, y: 419.5)))
     )
     if !open {
       drawFirefly(at: fit.point(CGPoint(x: 612, y: 392)), radius: 18 * fit.scale, lit: false, in: &context)
@@ -245,7 +245,7 @@ struct MarbleSceneView: View {
     area.addLine(to: CGPoint(x: top.x, y: fit.y(MarbleGarden.groundY)))
     area.closeSubpath()
     context.fill(area, with: .linearGradient(
-      Gradient(colors: [Color(hex: 0xC9B6FF).opacity(0.26 * alpha), Color(hex: 0x7A62E0).opacity(0.05 * alpha)]),
+      Gradient(colors: [LabColor.rampShade.opacity(0.26 * alpha), LabColor.rampShadeDeep.opacity(0.05 * alpha)]),
       startPoint: CGPoint(x: 0, y: top.y),
       endPoint: CGPoint(x: 0, y: fit.y(MarbleGarden.groundY))
     ))
@@ -255,7 +255,7 @@ struct MarbleSceneView: View {
       var leg = Path()
       leg.move(to: point)
       leg.addLine(to: CGPoint(x: point.x, y: fit.y(MarbleGarden.groundY)))
-      context.stroke(leg, with: .color(Color(hex: 0xC9B6FF).opacity(0.3 * alpha)), lineWidth: 1.5 * fit.scale)
+      context.stroke(leg, with: .color(LabColor.rampShade.opacity(0.3 * alpha)), lineWidth: 1.5 * fit.scale)
     }
 
     var line = Path()
@@ -264,15 +264,15 @@ struct MarbleSceneView: View {
     line.addQuadCurve(to: fit.point(track.curveEnd), control: fit.point(MarbleGarden.foot))
     if !ramp.isGhost {
       context.drawLayer { layer in
-        layer.addFilter(.shadow(color: Color(hex: 0x8E7CF0).opacity(0.6), radius: 7 * fit.scale))
-        layer.stroke(line, with: .color(Color(hex: 0x9C86F0).opacity(0.5)), style: StrokeStyle(lineWidth: 9 * fit.scale, lineCap: .round, lineJoin: .round))
+        layer.addFilter(.shadow(color: LabColor.gardenGlow.opacity(0.6), radius: 7 * fit.scale))
+        layer.stroke(line, with: .color(LabColor.rampGlow.opacity(0.5)), style: StrokeStyle(lineWidth: 9 * fit.scale, lineCap: .round, lineJoin: .round))
       }
     }
-    context.stroke(line, with: .color(Color(hex: 0xF4F1FF).opacity(0.95 * alpha)), style: StrokeStyle(lineWidth: max(1.5, 2.5 * fit.scale), lineCap: .round, lineJoin: .round))
+    context.stroke(line, with: .color(LabColor.rampRail.opacity(0.95 * alpha)), style: StrokeStyle(lineWidth: max(1.5, 2.5 * fit.scale), lineCap: .round, lineJoin: .round))
 
     context.drawLayer { layer in
-      if !ramp.isGhost { layer.addFilter(.shadow(color: Color(hex: 0xC9B6FF).opacity(0.8), radius: 4 * fit.scale)) }
-      layer.fill(Path(ellipseIn: CGRect(x: top.x - 5 * fit.scale, y: top.y - 5 * fit.scale, width: 10 * fit.scale, height: 10 * fit.scale)), with: .color(Color(hex: 0xF4F1FF).opacity(0.9 * alpha)))
+      if !ramp.isGhost { layer.addFilter(.shadow(color: LabColor.rampShade.opacity(0.8), radius: 4 * fit.scale)) }
+      layer.fill(Path(ellipseIn: CGRect(x: top.x - 5 * fit.scale, y: top.y - 5 * fit.scale, width: 10 * fit.scale, height: 10 * fit.scale)), with: .color(LabColor.rampRail.opacity(0.9 * alpha)))
     }
   }
 
@@ -433,7 +433,7 @@ struct MarbleSceneView: View {
       Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)),
       with: .radialGradient(
         Gradient(stops: [
-          .init(color: Color(hex: 0xFFFDF6), location: 0),
+          .init(color: LabColor.marbleCore, location: 0),
           .init(color: Color(hex: 0xFFD68A), location: 0.6),
           .init(color: LabColor.amber, location: 1)
         ]),

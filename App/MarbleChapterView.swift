@@ -154,7 +154,12 @@ struct MarbleChapterView: View {
     VStack(alignment: .leading, spacing: 0) {
       if room.ramp.fireflyAwake {
         title("The firefly woke up!")
-        line("Your marble reached the firefly.")
+        Label("Your marble reached the firefly.", systemImage: "checkmark")
+          .font(.system(.body, design: .rounded, weight: .medium))
+          .foregroundStyle(LabColor.correct)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.top, 10)
+          .accessibilityElement(children: .combine)
       } else {
         title("Wake the firefly")
         line("Roll the marble all the way to the flower.")
@@ -208,14 +213,16 @@ struct MarbleChapterView: View {
     }
   }
 
+  /// How the last roll missed, in lavender like the other rooms’ try-agains.
   @ViewBuilder
   private var status: some View {
     if let status = room.rollStatus {
-      Text(status)
+      Label(status, systemImage: "arrow.counterclockwise")
         .font(.system(.subheadline, design: .rounded, weight: .medium))
-        .foregroundStyle(LabColor.label)
+        .foregroundStyle(LabColor.retry)
         .fixedSize(horizontal: false, vertical: true)
         .transition(.opacity)
+        .accessibilityElement(children: .combine)
     }
   }
 

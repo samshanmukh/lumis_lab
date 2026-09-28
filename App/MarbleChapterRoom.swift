@@ -256,7 +256,7 @@ final class MarbleChapterRoom {
       scene.marbleRadius = marbleRadius
       scene.restingMarbles = [marbleCenter]
       scene.flowerOpen = ramp.fireflyAwake
-      scene.lumiMood = ramp.fireflyAwake ? .happy : .wonder
+      scene.lumiMood = experimentMood
       scene.accessibilityValue = experimentValue
     case .quiz, .why:
       scene.ramps = QuizRamp.allCases.map { RampMark(track: $0.track) }
@@ -271,9 +271,11 @@ final class MarbleChapterRoom {
         scene.accessibilityValue = "The gentle ramp’s marble stopped partway. The steep ramp’s marble rolled all the way to the flower."
       } else if quiz.selected != nil {
         scene.rolling = quiz.marbles
+        scene.lumiMood = .wonder
         scene.accessibilityValue = "Both marbles are rolling."
       } else {
         scene.restingMarbles = QuizRamp.allCases.map(\.track.startCenter)
+        scene.lumiMood = .calm
         scene.accessibilityValue = "Two ramps the same length, each with a marble at the top. The gentle ramp starts lower and the steep ramp starts higher."
       }
     case .roomEnd:
@@ -292,6 +294,15 @@ final class MarbleChapterRoom {
   private var flags: [FlagMark] {
     let shown = rolls.suffix(3).filter { !$0.wokeFirefly && $0.x <= ChapterGarden.flagLimit }
     return FlagMark.marks(for: shown.map { (x: $0.x, label: "\(Int($0.angle.rounded()))°", landedAt: $0.landedAt) })
+  }
+
+  /// Lumi watches the marble: calm before a roll, wide-eyed while it rolls, worried when it
+  /// misses, and happy when the firefly wakes.
+  private var experimentMood: LumiMood {
+    if ramp.fireflyAwake { return .happy }
+    if ramp.isRolling { return .wonder }
+    if ramp.lastOutcome != nil { return .worried }
+    return .calm
   }
 
   private var experimentValue: String {
